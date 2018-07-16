@@ -44,6 +44,7 @@
 					"en_ZA",
 					"es_MX",
 					"es_ES",
+					"fa_IR",
 					"fr_FR",
 					"fr_CA",
 					"fr_BE",
@@ -60,6 +61,7 @@
 					"nl_NL",
 					"pl_PL",
 					"ko_KR",
+					"th_TH",
 					"zh_SG",
 					"zh_TW",
 					"zh_CN",
@@ -225,6 +227,7 @@
 		assert.equal(oLocaleData.getPluralCategory("4"), "few", "plural category few for 4");
 		assert.equal(oLocaleData.getPluralCategory("11"), "many", "plural category many for 11");
 		assert.equal(oLocaleData.getPluralCategory("101"), "other", "plural category other for 101");
+		assert.equal(oLocaleData.getPreferredCalendarType(), "Islamic", "islamic calendar preferred")
 	}
 
 	function customTests_de_AT(oLocaleData) {
@@ -298,6 +301,7 @@
 		assert.equal(oLocaleData.getPluralCategory("4"), "other", "plural category other for 4");
 		assert.equal(oLocaleData.getPluralCategory("10"), "other", "plural category other for 10");
 		assert.equal(oLocaleData.getPluralCategory("101"), "other", "plural category other for 101");
+		assert.equal(oLocaleData.getPreferredCalendarType(), "Gregorian", "gregorian calendar preferred")
 	}
 
 	function customTests_de_XX(oLocaleData) {
@@ -401,6 +405,10 @@
 
 	function customTests_he_IL(oLocaleData) {
 		assert.equal(oLocaleData.getOrientation(), "right-to-left", "orientation");
+	}
+
+	function customTests_fa_IR(oLocaleData) {
+		assert.equal(oLocaleData.getPreferredCalendarType(), "Persian", "persian calendar preferred")
 	}
 
 	function customTests_fr_FR(oLocaleData) {
@@ -523,6 +531,10 @@
 		assert.equal(oLocaleData.getFirstDayOfWeek(), 1, "first day of week");
 		assert.equal(oLocaleData.getWeekendStart(), 6, "weekend start");
 		assert.equal(oLocaleData.getWeekendEnd(), 0, "weekend end");
+	}
+
+	function customTests_th_TH(oLocaleData) {
+		assert.equal(oLocaleData.getPreferredCalendarType(), "Buddhist", "buddhist calendar preferred")
 	}
 
 	QUnit.module("Locale data types", {

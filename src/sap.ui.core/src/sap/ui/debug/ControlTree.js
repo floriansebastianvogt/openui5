@@ -3,8 +3,8 @@
  */
 
 // Provides a tree of controls for the testsuite
-sap.ui.define('sap/ui/debug/ControlTree', ['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/core/Element', 'sap/ui/core/UIArea', './Highlighter'],
-	function(jQuery, EventProvider, Element, UIArea, Highlighter) {
+sap.ui.define('sap/ui/debug/ControlTree', ['sap/ui/base/EventProvider', 'sap/ui/core/Element', 'sap/ui/core/UIArea', './Highlighter', "sap/ui/dom/getOwnerWindow", "sap/base/Log"],
+	function(EventProvider, Element, UIArea, Highlighter, getOwnerWindow, Log) {
 	"use strict";
 
 
@@ -303,9 +303,9 @@ sap.ui.define('sap/ui/debug/ControlTree', ['jquery.sap.global', 'sap/ui/base/Eve
 		if (!sId) {
 			return;
 		}
-		var oDomRef = jQuery.sap.domById(sId, jQuery.sap.ownerWindow(this.oParentDomRef));
+		var oDomRef = (getOwnerWindow(this.oParentDomRef) || window).document.getElementById(sId);
 		if ( !oDomRef ) {
-			jQuery.sap.log.warning("Control with Id '" + sId.substring(22) + "' not found in tree");
+			Log.warning("Control with Id '" + sId.substring(22) + "' not found in tree");
 			return;
 		}
 		var	sControlId = oDomRef.getAttribute("sap-id");
@@ -325,7 +325,7 @@ sap.ui.define('sap/ui/debug/ControlTree', ['jquery.sap.global', 'sap/ui/base/Eve
 		if (!sId) {
 			return;
 		}
-		var oDomRef = jQuery.sap.domById(sId, jQuery.sap.ownerWindow(this.oParentDomRef));
+		var oDomRef = (getOwnerWindow(this.oParentDomRef) || window).document.getElementById(sId);
 		var oSpan = oDomRef.getElementsByTagName("SPAN")[0];
 		oSpan.style.backgroundColor = "transparent";
 		oSpan.style.color = "#000000";

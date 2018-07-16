@@ -6,12 +6,12 @@
  */
 sap.ui.define([
 	"jquery.sap.global",
-	"sap/base/util/LoaderExtensions",
-	"sap/ui/support/library"
+	"sap/ui/support/library",
+	"sap/base/util/LoaderExtensions"
 ], function(
 	jQuery,
-	LoaderExtensions,
-	SupportLib) {
+	SupportLib,
+	LoaderExtensions) {
 	"use strict";
 
 	// shortcuts

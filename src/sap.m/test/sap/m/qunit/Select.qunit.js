@@ -3408,6 +3408,40 @@
 		oModel.destroy();
 	});
 
+	QUnit.module("Altering the model");
+
+	QUnit.test("Changing selected item's data model of sap.m.Select should fire _itemTextChange event", function (assert) {
+
+		// system under test
+		var oModel, spy;
+		var oSelect = new sap.m.Select({
+			autoAdjustWidth: true,
+			items: [
+				new sap.ui.core.Item({id: "idItem1", text: "{/}"})
+			]
+		});
+
+		// arrange
+		oSelect.placeAt("content");
+		sap.ui.getCore().applyChanges();
+
+		oModel = new sap.ui.model.json.JSONModel();
+		oModel.setData("text");
+		oSelect.setModel(oModel);
+		spy = this.spy(sap.ui.core.Element.prototype, "fireEvent");
+
+		// act
+		oModel.setData("extremely long text");
+		oSelect.setModel(oModel);
+
+		// assert
+		assert.ok(spy.calledWithExactly("_itemTextChange"), "fireEvent is called with exactly '_itemTextChange' argument");
+		assert.ok(spy.withArgs("_itemTextChange").calledOnce, "fireEvent is called only once");
+
+		// cleanup
+		oSelect.destroy();
+	});
+
 	QUnit.module("value state");
 
 	QUnit.test("it should add the value state CSS classes (initial rendering)", function (assert) {
@@ -6086,6 +6120,7 @@
 				assert.ok(oSelect.$("arrow").length, "The HTML span element for the arrow exists");
 				assert.strictEqual(getComputedStyle(
 					oSelect.$("arrow")[0]).pointerEvents,
+					/* TODO remove after 1.62 version */
 					sap.ui.Device.browser.internet_explorer ? "none" : "auto",
 					"The HTML span element for the arrow has pointer-events = 'none' in IE, and 'auto' in all other browsers");
 			} else if (oSelect.getType() === sap.m.SelectType.IconOnly) {

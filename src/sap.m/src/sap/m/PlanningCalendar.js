@@ -4,7 +4,6 @@
 
 //Provides control sap.m.PlanningCalendar.
 sap.ui.define([
-	'jquery.sap.global',
 	'sap/ui/core/Control',
 	'sap/ui/base/ManagedObjectObserver',
 	'sap/ui/unified/library',
@@ -36,9 +35,11 @@ sap.ui.define([
 	'sap/m/StandardListItemRenderer',
 	'sap/m/PlanningCalendarRow',
 	'sap/m/PlanningCalendarRenderer',
-	'sap/m/library'
+	'sap/m/library',
+	"sap/base/util/deepEqual",
+	"sap/base/Log",
+	"sap/ui/dom/jquery/control" // jQuery Plugin "control"
 ], function(
-	jQuery,
 	Control,
 	ManagedObjectObserver,
 	unifiedLibrary,
@@ -70,7 +71,9 @@ sap.ui.define([
 	StandardListItemRenderer,
 	PlanningCalendarRow,
 	PlanningCalendarRenderer,
-	library
+	library,
+	deepEqual,
+	Log
 ) {
 	"use strict";
 
@@ -320,6 +323,9 @@ sap.ui.define([
 				 * the column headers do not fix at the top of the viewport. Similar behavior is also observed with the <code>ObjectPage</code> control.
 				 *
 				 * This API should not be used in production environment.
+				 *
+				 *<b>Note:</b> The <code>stickyHeader</code> of the <code>PlanningCalendar</code> uses the <code>sticky</code> property of <code>sap.m.Table</code>.
+				 * Therefore, all features and limitations of the property in <code>sap.m.Table</code> apply to the <code>PlanningCalendar</code> as well.
 				 *
 				 * @experimental As of 1.54
 				 * @since 1.54
@@ -598,6 +604,7 @@ sap.ui.define([
 		});
 
 		var oTable = new Table(sId + "-Table", {
+			sticky: [], // set sticky property to an empty array this correspondents to PlanningCalendar stickyHeader = false
 			infoToolbar: this._oInfoToolbar,
 			mode: ListMode.SingleSelectMaster,
 			columns: [ new Column({
@@ -649,7 +656,7 @@ sap.ui.define([
 		Device.orientation.detachHandler(this._updateStickyHeader, this);
 
 		if (this._sUpdateCurrentTime) {
-			jQuery.sap.clearDelayedCall(this._sUpdateCurrentTime);
+			clearTimeout(this._sUpdateCurrentTime);
 			this._sUpdateCurrentTime = undefined;
 		}
 
@@ -701,7 +708,7 @@ sap.ui.define([
 		updateSelectItems.call(this);
 
 		if (this._sUpdateCurrentTime) {
-			jQuery.sap.clearDelayedCall(this._sUpdateCurrentTime);
+			clearTimeout(this._sUpdateCurrentTime);
 			this._sUpdateCurrentTime = undefined;
 		}
 
@@ -813,7 +820,7 @@ sap.ui.define([
 			oStartDate.setTime(CalendarUtils._createLocalDate(oFirstDateOfMonth, true).getTime());
 		}
 
-		if (jQuery.sap.equal(oStartDate, this.getStartDate())) {
+		if (deepEqual(oStartDate, this.getStartDate())) {
 			/* Logically this _updateTodayButtonState should not be needed, because if the date didn't change,
 			 there is no need to update the button's state (the last state is correct).
 			 Still, as setStartDate can be called just by changing a view, where the startDate may remains the same,
@@ -827,12 +834,12 @@ sap.ui.define([
 
 		var oMinDate = this.getMinDate();
 		if (oMinDate && oMinDate.getTime() > oStartDate.getTime()) {
-			jQuery.sap.log.warning("StartDate < minDate -> StartDate set to minDate", this);
+			Log.warning("StartDate < minDate -> StartDate set to minDate", this);
 			oStartDate = new Date(oMinDate.getTime());
 		} else {
 			var oMaxDate = this.getMaxDate();
 			if (oMaxDate && oMaxDate.getTime() < oStartDate.getTime()) {
-				jQuery.sap.log.warning("StartDate > maxDate -> StartDate set to minDate", this);
+				Log.warning("StartDate > maxDate -> StartDate set to minDate", this);
 				if (oMinDate) {
 					oStartDate = new Date(oMinDate.getTime());
 				} else {
@@ -867,7 +874,7 @@ sap.ui.define([
 
 	PlanningCalendar.prototype.setMinDate = function(oDate){
 
-		if (jQuery.sap.equal(oDate, this.getMinDate())) {
+		if (deepEqual(oDate, this.getMinDate())) {
 			return this;
 		}
 
@@ -889,7 +896,7 @@ sap.ui.define([
 			}, this);
 
 			if (oMaxDate && oMaxDate.getTime() < oDate.getTime()) {
-				jQuery.sap.log.warning("minDate > maxDate -> maxDate set to end of the month", this);
+				Log.warning("minDate > maxDate -> maxDate set to end of the month", this);
 				oMaxDate = new Date(oDate.getTime());
 				oMaxDate.setMonth(oMaxDate.getMonth() + 1, 0);
 				oMaxDate.setHours(23);
@@ -902,7 +909,7 @@ sap.ui.define([
 			this._bNoStartDateChange = undefined;
 			var oStartDate = this.getStartDate();
 			if (oStartDate && oStartDate.getTime() < oDate.getTime()) {
-				jQuery.sap.log.warning("StartDate < minDate -> StartDate set to minDate", this);
+				Log.warning("StartDate < minDate -> StartDate set to minDate", this);
 				oStartDate = new Date(oDate.getTime());
 				this.setStartDate(oStartDate);
 			}
@@ -929,7 +936,7 @@ sap.ui.define([
 
 	PlanningCalendar.prototype.setMaxDate = function(oDate){
 
-		if (jQuery.sap.equal(oDate, this.getMaxDate())) {
+		if (deepEqual(oDate, this.getMaxDate())) {
 			return this;
 		}
 
@@ -951,7 +958,7 @@ sap.ui.define([
 			}, this);
 
 			if (oMinDate && oMinDate.getTime() > oDate.getTime()) {
-				jQuery.sap.log.warning("maxDate < minDate -> maxDate set to begin of the month", this);
+				Log.warning("maxDate < minDate -> maxDate set to begin of the month", this);
 				oMinDate = new Date(oDate.getTime());
 				oMinDate.setDate(1);
 				oMinDate.setHours(0);
@@ -964,7 +971,7 @@ sap.ui.define([
 			this._bNoStartDateChange = undefined;
 			var oStartDate = this.getStartDate();
 			if (oStartDate && oStartDate.getTime() > oDate.getTime()) {
-				jQuery.sap.log.warning("StartDate > maxDate -> StartDate set to minDate", this);
+				Log.warning("StartDate > maxDate -> StartDate set to minDate", this);
 				if (oMinDate) {
 					oStartDate = new Date(oMinDate.getTime());
 				} else {
@@ -1368,17 +1375,20 @@ sap.ui.define([
 	};
 
 	PlanningCalendar.prototype._updateStickyHeader = function() {
-		var bStick = this.getStickyHeader(),
+		var aStickyParts = [],
+			bStick = this.getStickyHeader(),
 			bMobile1MonthView = this.getViewKey() === PlanningCalendarBuiltInView.OneMonth && this._iSize < 2,
 			bStickyToolbar = bStick && !Device.system.phone && !bMobile1MonthView,
 			bStickyInfoToolbar = bStick && !(Device.system.phone && Device.orientation.landscape) && !bMobile1MonthView;
 
-		if (this._oToolbar) {
-			this._oToolbar.toggleStyleClass("sapMPlanCalStickyHeader", bStickyToolbar);
+		if (this._oToolbar && bStickyToolbar) {
+			aStickyParts.push(sap.m.Sticky.HeaderToolbar);
 		}
-		if (this._oInfoToolbar) {
-			this._oInfoToolbar.toggleStyleClass("sapMPlanCalStickyHeader", bStickyInfoToolbar);
+		if (this._oInfoToolbar && bStickyInfoToolbar) {
+			aStickyParts.push(sap.m.Sticky.InfoToolbar);
 		}
+
+		this.getAggregation("table").setSticky(aStickyParts);
 	};
 
 	PlanningCalendar.prototype.addRow = function(oRow) {
@@ -1874,7 +1884,7 @@ sap.ui.define([
 	PlanningCalendar.prototype._updateCurrentTimeVisualization = function (bUpdateRows) {
 
 		if (this._sUpdateCurrentTime) {
-			jQuery.sap.clearDelayedCall(this._sUpdateCurrentTime);
+			clearTimeout(this._sUpdateCurrentTime);
 			this._sUpdateCurrentTime = undefined;
 		}
 
@@ -1918,7 +1928,7 @@ sap.ui.define([
 		}
 
 		if (oNowDate.getTime() <= iEndTime && oNowDate.getTime() >= iStartTime && iTime > 0) {
-			this._sUpdateCurrentTime = jQuery.sap.delayedCall(iTime, this, '_updateCurrentTimeVisualization', [true]);
+			this._sUpdateCurrentTime = setTimeout(this['_updateCurrentTimeVisualization'].bind(this, true), iTime);
 		}
 
 	};
@@ -2289,7 +2299,7 @@ sap.ui.define([
 							intervalsL: 31
 						}));
 				default:
-					jQuery.sap.log.error("Cannot get PlanningCalendar views. Invalid view key " + sViewKey);
+					Log.error("Cannot get PlanningCalendar views. Invalid view key " + sViewKey);
 					break;
 			}
 		}, this);
@@ -2348,7 +2358,7 @@ sap.ui.define([
 
 			this._fnCustomSortedAppointments = fnSorter;
 		} else {
-			jQuery.sap.log.warning("Your custom sort function won't be used, but the old one will be preserved.", this);
+			Log.warning("Your custom sort function won't be used, but the old one will be preserved.", this);
 		}
 		return this;
 	};
@@ -2623,7 +2633,7 @@ sap.ui.define([
 			if (oLegend) {
 				aTypes = oLegend.getAppointmentItems ? oLegend.getAppointmentItems() : oLegend.getItems();
 			} else {
-				jQuery.sap.log.error("PlanningCalendarLegend with id '" + sLegendId + "' does not exist!", oTimeline);
+				Log.error("PlanningCalendarLegend with id '" + sLegendId + "' does not exist!", oTimeline);
 			}
 		}
 		return aTypes;
@@ -2883,9 +2893,9 @@ sap.ui.define([
 				var fnHandleAppsOverlay = function () {
 					var $CalendarRowAppsOverlay = jQuery(".sapUiCalendarRowAppsOverlay");
 
-					jQuery.sap.delayedCall(0, null, function () {
+					setTimeout(function () {
 						$CalendarRowAppsOverlay.addClass("sapUiCalendarRowAppsOverlayDragging");
-					});
+					}, 0);
 
 					jQuery(document).one("dragend", function () {
 						$CalendarRowAppsOverlay.removeClass("sapUiCalendarRowAppsOverlayDragging");
@@ -2965,7 +2975,7 @@ sap.ui.define([
 				}
 
 				if (!oDragSession.getIndicator()) {
-					jQuery.sap.delayedCall(0, null, fnAlignIndicator);
+					setTimeout(fnAlignIndicator, 0);
 				} else {
 					fnAlignIndicator();
 				}
@@ -3071,9 +3081,9 @@ sap.ui.define([
 						$DraggedControl = oDragSession.getDragControl().$();
 
 					$Indicator.addClass("sapUiDnDIndicatorHide");
-					jQuery.sap.delayedCall(0, null, function () {
+					setTimeout(function () {
 						$CalendarRowAppsOverlay.addClass("sapUiCalendarRowAppsOverlayDragging");
-					});
+					}, 0);
 
 					jQuery(document).one("dragend", function () {
 						$CalendarRowAppsOverlay.removeClass("sapUiCalendarRowAppsOverlayDragging");
@@ -3114,7 +3124,7 @@ sap.ui.define([
 					oDragSession.getDragControl().$().css(mDraggedControlConfig);
 
 					if (!oDragSession.getIndicator()) {
-						jQuery.sap.delayedCall(0, null, fnHideIndicator);
+						setTimeout(fnHideIndicator, 0);
 					} else {
 						fnHideIndicator();
 					}
@@ -3305,9 +3315,9 @@ sap.ui.define([
 						$CalendarRowAppsOverlay = oTimeline.$().find(".sapUiCalendarRowAppsOverlay"),
 						$Indicator = jQuery(oDragSession.getIndicator());
 
-					jQuery.sap.delayedCall(0, null, function () {
+					setTimeout(function () {
 						$CalendarRowAppsOverlay.addClass("sapUiCalendarRowAppsOverlayDragging");
-					});
+					}, 0);
 
 					jQuery(document).one("dragend", function () {
 						$CalendarRowAppsOverlay.removeClass("sapUiCalendarRowAppsOverlayDragging");
@@ -3342,7 +3352,7 @@ sap.ui.define([
 					}
 
 					if (!oDragSession.getIndicator()) {
-						jQuery.sap.delayedCall(0, null, fnAlignIndicator);
+						setTimeout(fnAlignIndicator, 0);
 					} else {
 						fnAlignIndicator();
 					}
@@ -3387,7 +3397,7 @@ sap.ui.define([
 		var $ghost = jQuery("<span></span>").addClass("sapUiCalAppResizeGhost");
 		$ghost.appendTo(document.body);
 
-		jQuery.sap.delayedCall(0, null, function() { $ghost.remove(); });
+		setTimeout(function() { $ghost.remove(); }, 0);
 
 		return $ghost.get(0);
 	}

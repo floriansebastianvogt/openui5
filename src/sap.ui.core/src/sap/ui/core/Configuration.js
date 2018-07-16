@@ -3,8 +3,32 @@
  */
 
 //Provides class sap.ui.core.Configuration
-sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', './Locale', 'sap/ui/thirdparty/URI', 'jquery.sap.script'],
-	function(jQuery, Device, Global, BaseObject, Locale, URI /*, jQuerySapScript */ ) {
+sap.ui.define([
+	'jquery.sap.global',
+	'../Device',
+	'../Global',
+	'../base/Object',
+	'./Locale',
+	'sap/ui/thirdparty/URI',
+	"sap/base/util/UriParameters",
+	"sap/base/util/deepEqual",
+	"sap/base/util/Version",
+	"sap/base/Log",
+	"sap/base/assert"
+],
+	function(
+		jQuery,
+		Device,
+		Global,
+		BaseObject,
+		Locale,
+		URI,
+		UriParameters,
+		deepEqual,
+		Version,
+		Log,
+		assert
+	) {
 	"use strict";
 
 	// lazy dependencies. Can't be declared as this would result in cyclic dependencies
@@ -264,15 +288,15 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 
 			var PARAM_CVERS = "compatversion";
 			var DEFAULT_CVERS = oCfg[PARAM_CVERS];
-			var BASE_CVERS = jQuery.sap.Version("1.14");
+			var BASE_CVERS = Version("1.14");
 			this._compatversion = {};
 
 			function _getCVers(key){
 				var v = !key ? DEFAULT_CVERS || BASE_CVERS.toString()
 						: oCfg[PARAM_CVERS + "-" + key.toLowerCase()] || DEFAULT_CVERS || M_COMPAT_FEATURES[key] || BASE_CVERS.toString();
-				v = jQuery.sap.Version(v.toLowerCase() === "edge" ? Global.version : v);
+				v = Version(v.toLowerCase() === "edge" ? Global.version : v);
 				//Only major and minor version are relevant
-				return jQuery.sap.Version(v.getMajor(), v.getMinor());
+				return Version(v.getMajor(), v.getMinor());
 			}
 
 			this._compatversion._default = _getCVers();
@@ -291,7 +315,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 			// 6. apply the settings from the url (only if not blocked by app configuration)
 			if ( !config.ignoreUrlParams ) {
 				var sUrlPrefix = "sap-ui-";
-				var oUriParams = jQuery.sap.getUriParameters();
+				var oUriParams = new UriParameters(window.location.href);
 
 				// first map SAP parameters, can be overwritten by "sap-ui-*" parameters
 				if ( oUriParams.mParams['sap-language'] ) {
@@ -303,7 +327,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 						config.language = oLocale;
 					} else if ( sValue && !oUriParams.get('sap-locale') && !oUriParams.get('sap-ui-language')) {
 						// only complain about an invalid sap-language if neither sap-locale nor sap-ui-language are given
-						jQuery.sap.log.warning("sap-language '" + sValue + "' is not a valid BCP47 language tag and will only be used as SAP logon language");
+						Log.warning("sap-language '" + sValue + "' is not a valid BCP47 language tag and will only be used as SAP logon language");
 					}
 				}
 
@@ -470,7 +494,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 			// log  all non default value
 			for (var n in M_SETTINGS) {
 				if ( config[n] !== M_SETTINGS[n].defaultValue ) {
-					jQuery.sap.log.info("  " + n + " = " + config[n]);
+					Log.info("  " + n + " = " + config[n]);
 				}
 			}
 
@@ -502,7 +526,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 				return this._version;
 			}
 
-			this._version = new jQuery.sap.Version(Global.version);
+			this._version = new Version(Global.version);
 			return this._version;
 		},
 
@@ -826,21 +850,28 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 						return this.calendarType;
 					}
 				}
-				jQuery.sap.log.warning("Parameter 'calendarType' is set to " + this.calendarType + " which isn't a valid value and therefore ignored. The calendar type is determined from format setting and current locale");
+				Log.warning("Parameter 'calendarType' is set to " + this.calendarType + " which isn't a valid value and therefore ignored. The calendar type is determined from format setting and current locale");
 			}
 
 			var sLegacyDateFormat = this.oFormatSettings.getLegacyDateFormat();
 
 			switch (sLegacyDateFormat) {
+				case "1":
+				case "2":
+				case "3":
+				case "4":
+				case "5":
+				case "6":
+					return CalendarType.Gregorian;
+				case "7":
+				case "8":
+				case "9":
+					return CalendarType.Japanese;
 				case "A":
 				case "B":
 					return CalendarType.Islamic;
 				case "C":
 					return CalendarType.Persian;
-				case "7":
-				case "8":
-				case "9":
-					return CalendarType.Japanese;
 			}
 
 			return LocaleData.getInstance(this.getLocale()).getPreferredCalendarType();
@@ -1437,12 +1468,12 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 					} else if ( typeof ctx[sMethod] === 'function' ) {
 						ctx[sMethod](m[sName]);
 					} else {
-						jQuery.sap.log.warning("Configuration.applySettings: unknown setting '" + sName + "' ignored");
+						Log.warning("Configuration.applySettings: unknown setting '" + sName + "' ignored");
 					}
 				}
 			}
 
-			jQuery.sap.assert(typeof mSettings === 'object', "mSettings must be an object");
+			assert(typeof mSettings === 'object', "mSettings must be an object");
 
 			this._collect(); // block events
 			applyAll(this, mSettings);
@@ -1639,7 +1670,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 				delete this.mSettings[sKey];
 			}
 			// report a change only if old and new value differ (null/undefined are treated as the same value)
-			if ( (oOldValue != null || oValue != null) && !jQuery.sap.equal(oOldValue, oValue) ) {
+			if ( (oOldValue != null || oValue != null) && !deepEqual(oOldValue, oValue) ) {
 				var mChanges = this.oConfiguration._collect();
 				mChanges[sKey] = oValue;
 				this.oConfiguration._endCollect();
@@ -1775,7 +1806,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 		 * @public
 		 */
 		getDatePattern : function(sStyle) {
-			jQuery.sap.assert(sStyle == "short" || sStyle == "medium" || sStyle == "long" || sStyle == "full", "sStyle must be short, medium, long or full");
+			assert(sStyle == "short" || sStyle == "medium" || sStyle == "long" || sStyle == "full", "sStyle must be short, medium, long or full");
 			return this.mSettings["dateFormats-" + sStyle];
 		},
 
@@ -1808,7 +1839,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 		 * @public
 		 */
 		getTimePattern : function(sStyle) {
-			jQuery.sap.assert(sStyle == "short" || sStyle == "medium" || sStyle == "long" || sStyle == "full", "sStyle must be short, medium, long or full");
+			assert(sStyle == "short" || sStyle == "medium" || sStyle == "long" || sStyle == "full", "sStyle must be short, medium, long or full");
 			return this.mSettings["timeFormats-" + sStyle];
 		},
 
@@ -1841,7 +1872,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 		 * @public
 		 */
 		getNumberSymbol : function(sType) {
-			jQuery.sap.assert(sType == "decimal" || sType == "group" || sType == "plusSign" || sType == "minusSign", "sType must be decimal, group, plusSign or minusSign");
+			assert(sType == "decimal" || sType == "group" || sType == "plusSign" || sType == "minusSign", "sType must be decimal, group, plusSign or minusSign");
 			return this.mSettings["symbols-latn-" + sType];
 		},
 
@@ -1962,7 +1993,7 @@ sap.ui.define(['jquery.sap.global', '../Device', '../Global', '../base/Object', 
 		},
 
 		_setDayPeriods : function(sWidth, aTexts) {
-			jQuery.sap.assert(sWidth == "narrow" || sWidth == "abbreviated" || sWidth == "wide", "sWidth must be narrow, abbreviated or wide");
+			assert(sWidth == "narrow" || sWidth == "abbreviated" || sWidth == "wide", "sWidth must be narrow, abbreviated or wide");
 			this._set("dayPeriods-format-" + sWidth, aTexts);
 			return this;
 		},

@@ -2,16 +2,26 @@
  * ${copyright}
  */
 sap.ui.require([
-	"jquery.sap.global",
-	"sap/ui/base/SyncPromise",
-	"sap/ui/core/format/DateFormat",
-	"sap/ui/model/odata/ODataUtils",
-	"sap/ui/model/odata/v4/lib/_Helper",
-	"sap/ui/model/odata/v4/lib/_Parser",
-	"sap/ui/model/odata/v4/lib/_Requestor",
-	"sap/ui/model/odata/v4/lib/_V2Requestor"
-], function (jQuery, SyncPromise, DateFormat, ODataUtils, _Helper, _Parser, _Requestor,
-		asV2Requestor) {
+    "jquery.sap.global",
+    "sap/ui/base/SyncPromise",
+    "sap/ui/core/format/DateFormat",
+    "sap/ui/model/odata/ODataUtils",
+    "sap/ui/model/odata/v4/lib/_Helper",
+    "sap/ui/model/odata/v4/lib/_Parser",
+    "sap/ui/model/odata/v4/lib/_Requestor",
+    "sap/ui/model/odata/v4/lib/_V2Requestor",
+    "sap/base/Log"
+], function(
+    jQuery,
+	SyncPromise,
+	DateFormat,
+	ODataUtils,
+	_Helper,
+	_Parser,
+	_Requestor,
+	asV2Requestor,
+	Log
+) {
 	/*global QUnit, sinon */
 	/*eslint max-nested-callbacks: 0, no-warning-comments: 0 */
 	"use strict";
@@ -19,7 +29,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.model.odata.v4.lib._V2Requestor", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 		}
@@ -1695,5 +1705,28 @@ sap.ui.require([
 			assert.strictEqual(oRequestor.convertResourcePath("Foo/Bar(42)/Baz/Qux(23)" + sQuery),
 				"Foo/Bar(~42~)/Baz/Qux(~23~)" + sQuery);
 		});
+	});
+
+	//*****************************************************************************************
+	QUnit.test("reportUnboundMessages does not call model interface", function (assert) {
+		var sMessages = '[{"code" : "42"}]',
+			oModelInterface = {fnReportUnboundMessages : function () {}},
+			oRequestor = _Requestor.create("/", oModelInterface, undefined, undefined, "2.0");
+
+		this.mock(oModelInterface).expects("fnReportUnboundMessages").never();
+
+		// code under test
+		oRequestor.reportUnboundMessages(sMessages);
+	});
+
+	//*****************************************************************************************
+	QUnit.test("reportBoundMessages does not call model interface", function (assert) {
+		var oModelInterface = {fnReportBoundMessages : function () {}},
+			oRequestor = _Requestor.create("/", oModelInterface, undefined, undefined, "2.0");
+
+		this.mock(oModelInterface).expects("fnReportBoundMessages").never();
+
+		// code under test
+		oRequestor.reportBoundMessages("Teams('42')", {/*mPathToMessages*/});
 	});
 });

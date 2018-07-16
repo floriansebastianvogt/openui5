@@ -3,8 +3,8 @@
  */
 
 // A renderer for the ScrollBar control
-sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
-	function(jQuery, Device) {
+sap.ui.define(['sap/ui/Device', "sap/ui/dom/getScrollbarSize"],
+	function(Device, getScrollbarSize) {
 	"use strict";
 
 
@@ -43,7 +43,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 		var sSize = oScrollBar.getSize();
 		var sContentSize = oScrollBar.getContentSize();
 
-		var oBSS = jQuery.sap.scrollbarSize(sScrollBarTouchClass);
+		var oBSS = getScrollbarSize(sScrollBarTouchClass);
 		var sWidth = oBSS.width;
 		var sHeight = oBSS.height;
 		// Fix for Fiory Client and Edge in Mobile Mode on Win8 and Win10
@@ -130,23 +130,22 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 
 
 	/* PURE HTML EXAMPLE, FOR TESTING, FOR EXAMPLE IE9 SCROLLING PROBLEM:
-	<h1>vertical</h1>
-	<div style="width:16px;height:200px;overflow:hidden">
-	<div style="width:32px;height:100%;margin-left:-16px;overflow-y:scroll;overflow-x:hidden" onscroll="document.getElementById('v').innerHTML = this.scrollTop">
-	<div style="height:1000px;width:16px"></div>
-	</div>
-	</div>
-	<div id="v"></div>
+	 * <h1>vertical</h1>
+	 * <div style="width:16px;height:200px;overflow:hidden">
+	 * <div style="width:32px;height:100%;margin-left:-16px;overflow-y:scroll;overflow-x:hidden" onscroll="document.getElementById('v').innerHTML = this.scrollTop">
+	 * <div style="height:1000px;width:16px"></div>
+	 * </div>
+	 * </div>
+	 * <div id="v"></div>
 
-	<h1>horizontal</h1>
-	<div style="width:200px;height:16px;overflow:hidden">
-	<div style="width:100%;height:32px;margin-top:-16px;overflow-x:scroll;overflow-y:hidden" onscroll="document.getElementById('h').innerHTML = this.scrollLeft">
-	<div style="width:1000px;height:16px;"></div>
-	</div>
-	</div>
-	<div id="h"></div>
-
-	*/
+	 * <h1>horizontal</h1>
+	 * <div style="width:200px;height:16px;overflow:hidden">
+	 * <div style="width:100%;height:32px;margin-top:-16px;overflow-x:scroll;overflow-y:hidden" onscroll="document.getElementById('h').innerHTML = this.scrollLeft">
+	 * <div style="width:1000px;height:16px;"></div>
+	 * </div>
+	 * </div>
+	 * <div id="h"></div>
+	 */
 
 	return ScrollBarRenderer;
 

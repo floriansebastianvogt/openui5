@@ -1,10 +1,7 @@
 /*!
  * ${copyright}
  */
-sap.ui.require([
-	"jquery.sap.global",
-	"sap/ui/test/TestUtils"
-], function (jQuery, TestUtils) {
+sap.ui.require(["jquery.sap.global", "sap/ui/test/TestUtils", "sap/base/Log"], function(jQuery, TestUtils, Log) {
 	/*global QUnit */
 	/*eslint max-nested-callbacks: 0, no-warning-comments: 0 */
 	"use strict";
@@ -12,7 +9,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.test.TestUtils", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 
@@ -61,6 +58,11 @@ sap.ui.require([
 	}, {
 		requestHeaders : { "DataServiceVersion" : "2.0" },
 		responseHeaders : { "OData-Version" : "4.0" },
+		expectedODataVersion : "4.0",
+		expectedDataServiceVersion : null
+	}, {
+		requestHeaders : { "DataServiceVersion" : "2.0" },
+		responseHeaders : { "OData-VerSion" : "4.0" },	// handle headers case sensitive
 		expectedODataVersion : "4.0",
 		expectedDataServiceVersion : null
 	}, {
@@ -141,6 +143,12 @@ sap.ui.require([
 				});
 				assert.strictEqual(bFoundODataVersionHeaders, bExpectedODataVersion,
 					"OData service version as expected in $batch response");
+				aResponseHeaders = aResponseHeaders.map(function (sHeader) {
+					return sHeader.toLowerCase();
+				});
+				assert.notOk(aResponseHeaders.some(function(sHeader, i) {
+					return aResponseHeaders.indexOf(sHeader, i + 1) !== -1;
+				}), "no duplicates");
 			});
 		});
 	});

@@ -10,9 +10,10 @@ sap.ui.require([
 	"sap/ui/model/odata/_AnnotationHelperBasics",
 	"sap/ui/model/odata/v4/_AnnotationHelperExpression",
 	"sap/ui/model/odata/v4/AnnotationHelper",
-	"sap/ui/model/odata/v4/ODataMetaModel"
+	"sap/ui/model/odata/v4/ODataMetaModel",
+	"sap/base/Log"
 ], function (jQuery, SyncPromise, Icon, BaseContext, JSONModel, Basics, Expression,
-		AnnotationHelper, ODataMetaModel) {
+		AnnotationHelper, ODataMetaModel, Log) {
 	/*global QUnit, sinon */
 	/*eslint no-warning-comments: 0 */
 	"use strict";
@@ -132,7 +133,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.model.odata.v4.AnnotationHelper", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 		}
@@ -171,6 +172,34 @@ sap.ui.require([
 	//TODO error handling? if path is wrong in annotation, a warning might be helpful --> later!
 	//TODO multi-valued structural or navigation property "in between" are not recognized; maybe
 	// add such checks only in case warnings would be logged?
+
+	//*********************************************************************************************
+	[true, false, {}, [], null, undefined].forEach(function (vFetchObjectResult, i) {
+		QUnit.test("isMultiple: $$valueAsPromise - " + i, function (assert) {
+			var oMetaModel = {
+					fetchObject : function () {}
+				},
+				oPromise;
+
+			this.mock(oMetaModel).expects("fetchObject")
+				.withExactArgs("/tea_busi.Worker/EMPLOYEE_2_TEAM/TEAM_2_EMPLOYEES/$isCollection")
+				.returns(SyncPromise.resolve(Promise.resolve(vFetchObjectResult)));
+
+			// code under test
+			oPromise = AnnotationHelper.isMultiple("EMPLOYEE_2_TEAM/TEAM_2_EMPLOYEES", {
+				$$valueAsPromise : true,
+				context : {
+					getModel : function () { return oMetaModel; }
+				},
+				schemaChildName : "tea_busi.Worker"
+			});
+
+			assert.ok(oPromise instanceof Promise, "Promise returned");
+			return oPromise.then(function (bIsMultiple) {
+				assert.strictEqual(bIsMultiple, i === 0);
+			});
+		});
+	});
 
 	//*********************************************************************************************
 	QUnit.test("getNavigationPath", function (assert) {
@@ -375,6 +404,29 @@ sap.ui.require([
 	});
 
 	//*********************************************************************************************
+	QUnit.test("getValueListType: $$valueAsPromise", function (assert) {
+		var oMetaModel = {
+				fetchValueListType : function () {}
+			},
+			oDetails = {
+				$$valueAsPromise : true,
+				context : {
+					getModel : function () { return oMetaModel; }
+				},
+				schemaChildName : "tea_busi.Worker"
+			},
+			oResult = {},
+			oSyncPromise = SyncPromise.resolve();
+
+		this.mock(oMetaModel).expects("fetchValueListType").withExactArgs("/tea_busi.Worker/ID")
+			.returns(oSyncPromise);
+		this.mock(oSyncPromise).expects("unwrap").withExactArgs().returns(oResult);
+
+		// code under test
+		assert.strictEqual(AnnotationHelper.getValueListType("ID", oDetails), oResult);
+	});
+
+	//*********************************************************************************************
 	QUnit.test("label - DataField has a label", function (assert) {
 		var oAnnotationHelperMock = this.mock(AnnotationHelper),
 			oContext = {},
@@ -437,6 +489,54 @@ sap.ui.require([
 
 		// code under test
 		AnnotationHelper.label(vRawValue, oDetails);
+	});
+
+	//*********************************************************************************************
+	QUnit.test("label: follow the path, $$valueAsPromise", function (assert) {
+		var oModel = {
+				createBindingContext : function () {},
+				fetchObject : function () {}
+			},
+			oContext = {
+				getModel : function () { return oModel; }
+			},
+			oDetails = {
+				$$valueAsPromise : true,
+				context : {
+					getModel : function () { return oModel; }
+				}
+			},
+			oModelMock = this.mock(oModel),
+			oPromise,
+			vRawValue = {
+				Value : {
+					$Path : "PhoneNumber"
+				}
+			},
+			vResult = {},
+			vValueAtPath = {},
+			oFetchObjectPromise = SyncPromise.resolve(Promise.resolve(vValueAtPath));
+
+		oModelMock.expects("createBindingContext")
+			.withExactArgs("Value/$Path@com.sap.vocabularies.Common.v1.Label",
+				sinon.match.same(oDetails.context))
+			.returns(oContext);
+		oModelMock.expects("fetchObject")
+			.withExactArgs("", oContext)
+			.returns(oFetchObjectPromise);
+		this.mock(AnnotationHelper).expects("value")
+			.withExactArgs(sinon.match.same(vValueAtPath), sinon.match({
+				context : sinon.match.same(oContext)
+			}))
+			.returns(vResult);
+
+		// code under test
+		oPromise = AnnotationHelper.label(vRawValue, oDetails);
+
+		assert.ok(oPromise instanceof Promise);
+		return oPromise.then(function (vResult0) {
+			assert.strictEqual(vResult0, vResult);
+		});
 	});
 
 	//*********************************************************************************************

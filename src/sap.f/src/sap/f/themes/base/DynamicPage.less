@@ -24,6 +24,7 @@
 	}
 }
 
+/* TODO remove after 1.62 version */
 html[data-sap-ui-browser^="ie"] {
 	.sapFDynamicPageContent {
 		flex-shrink: 0;
@@ -78,13 +79,54 @@ html[data-sap-ui-browser^="ie"] {
 	}
 }
 
+.sapUiContainerContentPadding(~".sapFDynamicPage", ~".sapFDynamicPageContent");
+.sapUiContainerContentPadding(~".sapFDynamicPage", ~".sapFDynamicPageContentFitContainer");
+
+.sapFDynamicPage.sapUiContentPadding,
+.sapFDynamicPage.sapUiNoContentPadding,
+.sapFDynamicPage.sapUiResponsiveContentPadding {
+	.sapFDynamicPageAlignContent {
+		margin: 0;
+	}
+}
+
+.sapFDynamicPage.sapUiContentPadding {
+	.sapFDynamicPage-Std-Phone {
+		.sapFDynamicPageAlignContent {
+			margin: 0 -1rem;
+		}
+	}
+}
+
+.sapFDynamicPage.sapUiResponsiveContentPadding {
+	&.sapFDynamicPage-Std-Phone {
+		.sapFDynamicPageContent,
+		.sapFDynamicPageContentFitContainer {
+			padding: 0;
+		}
+	}
+
+	&.sapFDynamicPage-Std-Tablet {
+		.sapFDynamicPageContent,
+		.sapFDynamicPageContentFitContainer {
+			padding: 1rem;
+		}
+	}
+
+	&.sapFDynamicPage-Std-Desktop {
+		.sapFDynamicPageContent,
+		.sapFDynamicPageContentFitContainer {
+			padding: 1rem 2rem;
+		}
+	}
+}
 
 .sapFDynamicPageContentWrapper {
 	width: 100%;
 	height: 100%;
 	position: relative;
 	will-change: transform;
-	-webkit-overflow-scrolling: touch;
+	-webkit-overflow-scrolling: auto;
 
 	display: -webkit-box;
 	display: -webkit-flex;

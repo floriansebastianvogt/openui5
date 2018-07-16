@@ -199,6 +199,258 @@
         "type": "FIX",
         "text": " ui5loader: Add Missing slash for JSDoc in closing code tag",
         "references": []
+      },
+      {
+        "id": "20693b9b2baab603ce9d4c02bd33c7aaca642686",
+        "type": "FIX",
+        "text": " ControllerMetadata: don\u0027t delete public methods",
+        "references": []
+      },
+      {
+        "id": "c1cd5165851c9a8b6d0efdb935e756fc03c82b1f",
+        "type": "FIX",
+        "text": " LocaleData: Return Islamic as preferred calendar for ar_SA",
+        "references": []
+      },
+      {
+        "id": "5fa29f148977e4d532a170e923c74f542d341100",
+        "type": "FIX",
+        "text": " ManagedObjectModel: Update in case aggregation gets removed",
+        "references": []
+      },
+      {
+        "id": "2c9f437e7d20519513ab9c762dcca12bc8f51b5c",
+        "type": "FIX",
+        "text": " core/Router: adapted JSDOC for #getTarget to be public",
+        "references": []
+      },
+      {
+        "id": "b4ff9dbeab78e6fc2c2f6cef7802c57ab9deadad",
+        "type": "FIX",
+        "text": " sap.ui.model.analytics.AnalyticalBinding#_createMultiUnitRepresentativeEntry",
+        "references": []
+      },
+      {
+        "id": "13c3f3cebdca499b608ef61f8c3a2c02ed6e43d7",
+        "type": "FIX",
+        "text": " sap.ui.model.odata.AnnotationParser: better support annotations at arrays",
+        "references": []
+      },
+      {
+        "id": "b3b397f85a3195111eebbe51c05d52074fd0eea0",
+        "type": "FEATURE",
+        "text": " Buddhist: Support Thai solar buddhist calendar",
+        "references": []
+      },
+      {
+        "id": "dcc0e7f468ff3eec8ef3607620d508895a1d09bd",
+        "type": "FIX",
+        "text": " Component: Make url-objects working again in asyncHints.libs",
+        "references": []
+      },
+      {
+        "id": "a98f94d60b7f9c858dedeee3cd24401227ca27aa",
+        "type": "FIX",
+        "text": " sap.m.BusyIndicator: Outline for focused busy indicator improved",
+        "references": []
+      },
+      {
+        "id": "f0221df90769b7ffcae752eed4e512ecc6e42b81",
+        "type": "FIX",
+        "text": " sap/ui/dom/ActiveElementFix: empty object document.activeElement",
+        "references": []
+      },
+      {
+        "id": "e5c018680c5c41b07c1cd7ae2caade5cacbeef99",
+        "type": "FEATURE",
+        "text": " ui5loader: Add AMD compliant require.config()",
+        "references": []
+      },
+      {
+        "id": "837827ee30f44b949afb625e60fb275204762e46",
+        "type": "FEATURE",
+        "text": " ui5loader: Enable async loading when switching to amd mode",
+        "references": []
+      },
+      {
+        "id": "9336ec8959dbc4df78fcf4ab8ca0036bb1ba3ad3",
+        "type": "FIX",
+        "text": " Component: asyncHints with \"final\" flag",
+        "references": []
+      },
+      {
+        "id": "3f4013953f146f725380457e905bc4848e21016a",
+        "type": "FIX",
+        "text": " Configuration: Ensure gregorian calendar for legacy patterns 1-6",
+        "references": []
+      },
+      {
+        "id": "f868d491437a5b1fc9eb7f1e0779c23d4971c753",
+        "type": "FIX",
+        "text": " ManagedObject: detach DS only if attached",
+        "references": []
+      },
+      {
+        "id": "56c2e86b7bcd3cd0fa190754f0c7e4d81ae49fa8",
+        "type": "FIX",
+        "text": " NumberFormat: Fix currency short format for RTL languages",
+        "references": []
+      },
+      {
+        "id": "339cfff4812065bf354278feb3c8ab21cd1830b9",
+        "type": "FIX",
+        "text": " Promise Polyfill: Use native Promise in Safari / Edge",
+        "references": []
+      },
+      {
+        "id": "ca3b4482a521ff7f439e6faf772eccf0d82ad900",
+        "type": "FIX",
+        "text": " Theming Parameters: Improve inline parameters decoding",
+        "references": []
+      },
+      {
+        "id": "3b4b778d2c840038c7d33d005dc91d38d790bfa7",
+        "type": "FIX",
+        "text": " XMLComposite: Callback getResult now a Promise",
+        "references": []
+      },
+      {
+        "id": "41287985940af1f1ffab7854dbc3830a7d21d7ab",
+        "type": "FIX",
+        "text": " sap.ui.model.base.ManagedObjectModel",
+        "references": []
+      },
+      {
+        "id": "e59c866f898eae8cb8cd436321b9e08b6ee153cf",
+        "type": "FIX",
+        "text": " sap.ui.model.odata.AnnotationParser: better support annotations at arrays",
+        "references": []
+      },
+      {
+        "id": "57e0bdb76a4cd97153bf621d0a52ce2c0ada7bbf",
+        "type": "FIX",
+        "text": " sap.ui.model.odata.type.Date/Time: use end of current year as example",
+        "references": []
+      },
+      {
+        "id": "4001273c9bc5154c9de74773871703a9f80e1bd0",
+        "type": "FIX",
+        "text": " test/launchers/iFrameLauncher: fixed loader config access",
+        "references": []
+      },
+      {
+        "id": "09434ce403775258e8f752699479292fcb531fe6",
+        "type": "FEATURE",
+        "text": " ODataAnnotations: expose eTag header",
+        "references": []
+      },
+      {
+        "id": "763c200157791337bc0d6dab99556d2ac5f3e279",
+        "type": "FEATURE",
+        "text": " OverflowToolbar: shrinking of controls is enabled",
+        "references": []
+      },
+      {
+        "id": "44e9000fa60d010148f02fefdf71f34ef7b6007b",
+        "type": "FEATURE",
+        "text": " adding sap.ui.core.IconColor.Contrast",
+        "references": []
+      },
+      {
+        "id": "8958b6baf77e9f91cfadca4e7942df140be49ab2",
+        "type": "FIX",
+        "text": " Component.getService(): Promise not rejecting",
+        "references": []
+      },
+      {
+        "id": "690b94d22ebcc83bb27ed421b378a91b2ab60819",
+        "type": "FIX",
+        "text": " QUnit: EnterText for number input was improved",
+        "references": []
+      },
+      {
+        "id": "b2f62abe5c6663bd4c56901efc330b1db2c9ff4c",
+        "type": "FIX",
+        "text": " XMLComposite: Event propagation in cloning",
+        "references": []
+      },
+      {
+        "id": "7c121b646cc55b5b809e1d7db55f6ad19d2aaa46",
+        "type": "FIX",
+        "text": " jQuery.sap.loadResource: ignore URL params",
+        "references": []
+      },
+      {
+        "id": "ec9d5d3b732518b6b2b9392ec17e2f02c9f3256c",
+        "type": "FIX",
+        "text": " model.ODataUtils: Complement toupper on all filter operators",
+        "references": []
+      },
+      {
+        "id": "afe894e1db2a172b1828481465f67009c28c93e2",
+        "type": "FIX",
+        "text": " sap/ui/dom/getComputedStyleFix: document.body is not there yet",
+        "references": []
+      },
+      {
+        "id": "7f880b3805a40813ba4c4c3abf4385098c18f68f",
+        "type": "FIX",
+        "text": " sap/ui/model/Model: Force update refresh fix",
+        "references": []
+      },
+      {
+        "id": "8cfd719562ae7b32909341597991fc0e2aaf574b",
+        "type": "FEATURE",
+        "text": " XMLComposite: provide fragment content directly (string/xml)",
+        "references": []
+      },
+      {
+        "id": "228ce8fda6fb4a3c66d0a74b3af4e1eea4e30708",
+        "type": "FIX",
+        "text": " Core: Trigger ThemeCheck when a library has been initialized",
+        "references": []
+      },
+      {
+        "id": "435071bf663424d0f44bd83f90e718853ecff29d",
+        "type": "FIX",
+        "text": " Fix aggregation forwarding issue with move in hierarchy",
+        "references": []
+      },
+      {
+        "id": "9f7735d15aabbbd8c8f413758ded46358ebfd96c",
+        "type": "FIX",
+        "text": " List/TreeBinding: Application filter vs control filter",
+        "references": []
+      },
+      {
+        "id": "1d957d861cac2b914f27b237b494799417572093",
+        "type": "FIX",
+        "text": " List/TreeBinding: Application filter vs control filter",
+        "references": []
+      },
+      {
+        "id": "a14a139c5bb8638e26a1ffe477b68366d9c5186d",
+        "type": "FIX",
+        "text": " List/TreeBinding: Application filter vs control filter",
+        "references": []
+      },
+      {
+        "id": "b7d9298346554026e8d613b8f79896496119a02b",
+        "type": "FIX",
+        "text": " NumberFormat: Several fixes for short currency formatting",
+        "references": []
+      },
+      {
+        "id": "533678d7eb0d6b673ed0e02399b02ad98fad565c",
+        "type": "FIX",
+        "text": " ODataAnnotations: restore cached arrays",
+        "references": []
+      },
+      {
+        "id": "53f7bbc2ba1c81adbaf656c3d5730994b295555e",
+        "type": "FIX",
+        "text": " Opa: parse boolean URL parameters",
+        "references": []
       }
     ]
   }

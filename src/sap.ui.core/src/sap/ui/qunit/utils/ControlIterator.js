@@ -2,8 +2,8 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core'],
-		function(jQuery, Core) {
+sap.ui.define(['sap/ui/core/Core', "sap/base/util/ObjectPath", "sap/base/Log"],
+		function(Core, ObjectPath, Log) {
 	"use strict";
 
 	/**
@@ -166,7 +166,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core'],
 			return false;
 		}
 
-		var oControlClass = jQuery.sap.getObject(sControlName);
+		var oControlClass = ObjectPath.get(sControlName);
 		if (!oControlClass) {
 			return false;
 		}
@@ -214,7 +214,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core'],
 		for (i = 0; i < oInfo.libraries.length; i++) {
 			sInfoLibName = oInfo.libraries[i].name;
 			if (jQuery.inArray(sInfoLibName, aExcludedLibraries) === -1 && !mLibraries[sInfoLibName]) {
-				jQuery.sap.log.info("Libary '" + sInfoLibName + "' is not loaded!");
+				Log.info("Libary '" + sInfoLibName + "' is not loaded!");
 				try {
 					sap.ui.getCore().loadLibrary(sInfoLibName);
 					bNewLibrary = true;
@@ -368,7 +368,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core'],
 
 			if (shouldTestControl(sControlName, aExcludedControls, bIncludeNonRenderable, bIncludeNonInstantiable)) {
 				bCountThisControl = true;
-				var oControlClass = jQuery.sap.getObject(sControlName);
+				var oControlClass = ObjectPath.get(sControlName || "");
 
 				fnCallback(sControlName, oControlClass, {
 					canInstantiate: ControlIterator.controlCanBeInstantiated(sControlName),

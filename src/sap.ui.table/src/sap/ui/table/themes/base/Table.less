@@ -25,8 +25,6 @@
 	color: @sapUiListTextColor;
 	position: relative;
 	box-sizing: border-box;
-	// IE will read a clientHeight of 0px, if the clientWidth is 0, although the table has a height
-	min-width: 1rem;
 	// Define stacking context to avoid conflicts with other controls
 	z-index: 0;
 }
@@ -490,13 +488,15 @@ html[data-sap-ui-browser^="ie"] .sapUiTableColHdrCnt {
 	color: @sapUiListTextColor;
 }
 
-.sapUiTableCol:active {
-	background-color: @sapUiListActiveBackground;
-}
+.sapUiTable:not(.sapUiTableDragDrop) {
+	.sapUiTableCol:active {
+		background-color: @sapUiListActiveBackground;
+	}
 
-.sapUiTableCol:active > div > label,
-.sapUiTableCol:active > div > span {
-	color: @sapUiListActiveTextColor;
+	.sapUiTableCol:active > div > label,
+	.sapUiTableCol:active > div > span {
+		color: @sapUiListActiveTextColor;
+	}
 }
 
 .sapUiTableColHdrTr > .sapUiTableCol {

@@ -1,27 +1,31 @@
 /*global QUnit, sinon */
 
-sap.ui.require([
+sap.ui.define([
 	"sap/ui/model/odata/v2/ODataModel",
-	"sap/ui/model/odata/ODataTreeBindingAdapter"
-], function(ODataModel, ODataTreeBindingAdapter) {
+	"sap/ui/model/odata/ODataTreeBindingAdapter",
+	"sap/ui/table/TableUtils",
+	"sap/ui/core/util/MockServer",
+	"sap/ui/model/Sorter",
+	"sap/ui/thirdparty/sinon-qunit" /*Sinon itself already part of MockServer*/
+], function(ODataModel, ODataTreeBindingAdapter, TableUtils, MockServer, Sorter, SinonQUnit) {
 	"use strict";
 
 	sinon.config.useFakeTimers = false;
 
-	//Initialize mock servers
-	var MockServer = sap.ui.core.util.MockServer;
+	var sURLPrefix = sap.ui.require.toUrl("sap/ui/core/qunit");
 
+	//Initialize mock servers
 	//Mock server for use with navigation properties
 	var oNavPropMockServer = new MockServer({
 		rootUri: "/navprop/"
 	});
-	oNavPropMockServer.simulate("../../core/qunit/model/metadata_odtb.xml", "../../core/qunit/model/odtb/");
+	oNavPropMockServer.simulate(sURLPrefix + "/model/metadata_odtb.xml", sURLPrefix + "/model/odtb/");
 
 	//MockServer for use with annotated tree
 	var oAnnotationMockServer = new MockServer({
 		rootUri: "/metadata/"
 	});
-	oAnnotationMockServer.simulate("../../core/qunit/model/metadata_odtbmd.xml", "../../core/qunit/model/odtbmd/");
+	oAnnotationMockServer.simulate(sURLPrefix + "/model/metadata_odtbmd.xml", sURLPrefix + "/model/odtbmd/");
 
 	/**
 	 * Clean-Up Hierarchy Annotation Mockdata/Metadata
@@ -58,7 +62,7 @@ sap.ui.require([
 		});
 		assert.equal(oBinding.getPath(), "/Employees(2)", "TreeBinding path");
 		assert.equal(oBinding.getModel(), oModel, "TreeBinding model");
-		assert.ok(oBinding instanceof sap.ui.model.odata.v2.ODataTreeBinding, "treeBinding class check");
+		assert.ok(TableUtils.isInstanceOf(oBinding, "sap/ui/model/odata/v2/ODataTreeBinding"), "treeBinding class check");
 	});
 
 	QUnit.test("getRootContexts getNodeContexts", function(assert) {
@@ -1662,7 +1666,7 @@ sap.ui.require([
 
 				oBinding.attachRefresh(fnRefreshHandler);
 				//sort descending
-				oBinding.sort(new sap.ui.model.Sorter("HierarchyNode", true));
+				oBinding.sort(new Sorter("HierarchyNode", true));
 			}
 
 			//refresh after sort()

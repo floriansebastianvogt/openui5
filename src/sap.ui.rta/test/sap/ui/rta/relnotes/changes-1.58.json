@@ -55,6 +55,60 @@
         "type": "FIX",
         "text": " sap.ui.rta: deselect overlays before removing them",
         "references": []
+      },
+      {
+        "id": "592004d1eb67972e445b9410a5153453f1fd6cc2",
+        "type": "FIX",
+        "text": " Revise arrow key navigation",
+        "references": []
+      },
+      {
+        "id": "4d453761642b9dd95a8c6316ca261d7e12d6183f",
+        "type": "FIX",
+        "text": "sap.ui.rta - Prevent overlay plugin evaluation during drag\u0026drop",
+        "references": []
+      },
+      {
+        "id": "cb7a43859a68149f9ce5ffb577321fab0ff46f87",
+        "type": "FIX",
+        "text": " sap.ui.rta: Fixed the text for failing catalog assignment",
+        "references": []
+      },
+      {
+        "id": "a2fb174c28e2c167e8251ad02a92a6bb7effebd2",
+        "type": "FIX",
+        "text": " sap.ui.rta:Change service.Outline.OutlineObject visibility",
+        "references": []
+      },
+      {
+        "id": "1a1d07ef0dfd27686df2496eef5d824f999bb062",
+        "type": "FIX",
+        "text": " Issues with displaying error messages in case of failed save",
+        "references": []
+      },
+      {
+        "id": "a32147a2be046d29b99de8582fe29f899da816cc",
+        "type": "FIX",
+        "text": " Revise message text in case of save error",
+        "references": []
+      },
+      {
+        "id": "9dc5f0fc0f8d9ad102b545278fa60c44e6702e0b",
+        "type": "FIX",
+        "text": " sap.ui.rta - AppVariantManager test bugfix",
+        "references": []
+      },
+      {
+        "id": "2b9ccf176e22630692f0fa40f35cf4b63f573724",
+        "type": "FIX",
+        "text": " sap.ui.rta - Improve language compatibility of RTA texts",
+        "references": []
+      },
+      {
+        "id": "a13538a8f845326798356b724a9fe95b00ec7621",
+        "type": "FIX",
+        "text": "sap.ui.rta - Rename plugin handling of overlays as arrays",
+        "references": []
       }
     ]
   }

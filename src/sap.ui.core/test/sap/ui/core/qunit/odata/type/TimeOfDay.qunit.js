@@ -2,17 +2,28 @@
  * ${copyright}
  */
 sap.ui.require([
-	"jquery.sap.global",
-	"sap/ui/core/Control",
-	"sap/ui/core/format/DateFormat",
-	"sap/ui/model/FormatException",
-	"sap/ui/model/ParseException",
-	"sap/ui/model/ValidateException",
-	"sap/ui/model/odata/type/ODataType",
-	"sap/ui/model/odata/type/TimeOfDay",
-	"sap/ui/test/TestUtils"
-], function (jQuery, Control, DateFormat, FormatException, ParseException, ValidateException,
-		ODataType, TimeOfDay, TestUtils) {
+    "jquery.sap.global",
+    "sap/ui/core/Control",
+    "sap/ui/core/format/DateFormat",
+    "sap/ui/model/FormatException",
+    "sap/ui/model/ParseException",
+    "sap/ui/model/ValidateException",
+    "sap/ui/model/odata/type/ODataType",
+    "sap/ui/model/odata/type/TimeOfDay",
+    "sap/ui/test/TestUtils",
+    "sap/base/Log"
+], function(
+    jQuery,
+	Control,
+	DateFormat,
+	FormatException,
+	ParseException,
+	ValidateException,
+	ODataType,
+	TimeOfDay,
+	TestUtils,
+	Log
+) {
 	/*global QUnit */
 	"use strict";
 
@@ -29,7 +40,7 @@ sap.ui.require([
 			} catch (e) {
 				assert.ok(e instanceof ParseException);
 				assert.strictEqual(e.message,
-					"EnterTime " + oType.formatValue("13:47:26", "string"));
+					"EnterTime " + oType.formatValue("23:59:58", "string"));
 			}
 		});
 	}
@@ -37,7 +48,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.model.odata.type.TimeOfDay", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 
@@ -293,7 +304,7 @@ sap.ui.require([
 			var oType = new TimeOfDay({}, {nullable : false});
 
 			assert.throws(oType.validateValue.bind(oType, null),
-				new ValidateException("EnterTime 1:47:26 PM"));
+				new ValidateException("EnterTime 11:59:58 PM"));
 		});
 	});
 

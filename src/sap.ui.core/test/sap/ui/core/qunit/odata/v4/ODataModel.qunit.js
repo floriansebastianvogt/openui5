@@ -25,11 +25,12 @@ sap.ui.require([
 	"sap/ui/model/odata/v4/ODataPropertyBinding",
 	"sap/ui/model/odata/v4/SubmitMode",
 	"sap/ui/test/TestUtils",
-	"sap/ui/thirdparty/URI"
+	"sap/ui/thirdparty/URI",
+	"sap/base/Log"
 ], function (jQuery, MessageType, Message, Binding, BindingMode, BaseContext, Model, TypeString,
 		ODataUtils, OperationMode, Context, _MetadataRequestor, _GroupLock, _Helper, _Parser,
 		_Requestor, ODataContextBinding, ODataListBinding, ODataMetaModel, ODataModel,
-		ODataPropertyBinding, SubmitMode, TestUtils, URI) {
+		ODataPropertyBinding, SubmitMode, TestUtils, URI, Log) {
 	/*global QUnit, sinon */
 	/*eslint max-nested-callbacks: 0, no-warning-comments: 0 */
 	"use strict";
@@ -95,7 +96,7 @@ sap.ui.require([
 	QUnit.module("sap.ui.model.odata.v4.ODataModel", {
 		beforeEach : function () {
 			TestUtils.setupODataV4Server(this._oSandbox, mFixture, undefined, sServiceUrl);
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 			this.mock(sap.ui.getCore().getConfiguration()).expects("getLanguageTag").atLeast(0)
@@ -291,6 +292,7 @@ sap.ui.require([
 
 		// code under test
 		assert.strictEqual(oModel.getGroupProperty("$auto", "submit"), SubmitMode.Auto);
+		assert.strictEqual(oModel.getGroupProperty("$auto.foo", "submit"), SubmitMode.Auto);
 		assert.strictEqual(oModel.getGroupProperty("$direct", "submit"), SubmitMode.Direct);
 		assert.strictEqual(oModel.getGroupProperty("myGroup0", "submit"), SubmitMode.API);
 		assert.strictEqual(oModel.getGroupProperty("myGroup1", "submit"), SubmitMode.Auto);
@@ -342,6 +344,7 @@ sap.ui.require([
 
 		// code under test
 		assert.ok(oModel.isAutoGroup("$auto"));
+		assert.ok(oModel.isAutoGroup("$auto.foo"));
 		assert.notOk(oModel.isAutoGroup("Unknown"));
 		assert.ok(oModel.isAutoGroup("myAutoGroup"));
 		assert.notOk(oModel.isAutoGroup("myAPIGroup"));
@@ -394,6 +397,7 @@ sap.ui.require([
 			oExpectedBind1,
 			oExpectedBind2,
 			oExpectedBind3,
+			oExpectedBind4,
 			oExpectedCreate = this.mock(_Requestor).expects("create"),
 			fnFetchEntityContainer = function () {},
 			fnFetchMetadata = function () {},
@@ -414,6 +418,8 @@ sap.ui.require([
 			.returns(ODataModel.prototype.getGroupProperty);
 		oExpectedBind3 = this.mock(ODataModel.prototype.reportUnboundMessages).expects("bind")
 			.returns(ODataModel.prototype.reportUnboundMessages);
+		oExpectedBind4 = this.mock(ODataModel.prototype.reportBoundMessages).expects("bind")
+			.returns(ODataModel.prototype.reportBoundMessages);
 
 		// code under test
 		oModel = createModel("?sap-client=123");
@@ -424,6 +430,7 @@ sap.ui.require([
 		assert.strictEqual(oExpectedBind1.firstCall.args[0], oModel.oMetaModel);
 		assert.strictEqual(oExpectedBind2.firstCall.args[0], oModel);
 		assert.strictEqual(oExpectedBind3.firstCall.args[0], oModel);
+		assert.strictEqual(oExpectedBind4.firstCall.args[0], oModel);
 
 		this.mock(oModel._submitBatch).expects("bind")
 			.withExactArgs(sinon.match.same(oModel), "$auto")
@@ -1020,6 +1027,8 @@ sap.ui.require([
 		// valid group IDs
 		oModel.checkGroupId("myGroup");
 		oModel.checkGroupId("$auto");
+		oModel.checkGroupId("$auto.foo");
+		oModel.checkGroupId("$auto.1");
 		oModel.checkGroupId("$direct");
 		oModel.checkGroupId(undefined);
 		oModel.checkGroupId("myGroup", true);
@@ -1065,138 +1074,6 @@ sap.ui.require([
 				oModel.checkDeferredGroupId(sGroupId);
 			}, new Error("Group ID is not deferred: " + sGroupId));
 		});
-	});
-
-	//*********************************************************************************************
-	QUnit.test("buildBindingParameters, $$aggregation", function (assert) {
-		var aAggregation = [],
-			aAllowed = ["$$aggregation"],
-			oModel = createModel(),
-			mParameters = {$$aggregation : aAggregation},
-			mResult;
-
-		// code under test
-		mResult = oModel.buildBindingParameters(mParameters, aAllowed);
-
-		assert.deepEqual(mResult, mParameters);
-		assert.strictEqual(mResult.$$aggregation, aAggregation);
-	});
-
-	//*********************************************************************************************
-	QUnit.test("buildBindingParameters, $$groupId", function (assert) {
-		var aAllowedParams = ["$$groupId"],
-			oModel = createModel();
-
-		assert.deepEqual(oModel.buildBindingParameters(undefined), {});
-		assert.deepEqual(oModel.buildBindingParameters({}), {});
-		assert.deepEqual(oModel.buildBindingParameters({$$groupId : "$auto"}, aAllowedParams),
-			{$$groupId : "$auto"});
-		assert.deepEqual(oModel.buildBindingParameters(
-			{$$groupId : "$direct", custom : "foo"}, aAllowedParams), {$$groupId : "$direct"});
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$unsupported : "foo"});
-		}, new Error("Unsupported binding parameter: $$unsupported"));
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$groupId : ""}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$groupId': "));
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$groupId : "~invalid"}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$groupId': ~invalid"));
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$groupId : "$auto"});
-		}, new Error("Unsupported binding parameter: $$groupId"));
-	});
-
-	//*********************************************************************************************
-	QUnit.test("buildBindingParameters, $$inheritExpandSelect", function (assert) {
-		var aAllowedParams = ["$$inheritExpandSelect"],
-			oModel = createModel();
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$inheritExpandSelect : undefined}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$inheritExpandSelect': undefined"));
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$inheritExpandSelect : "foo"}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$inheritExpandSelect': foo"));
-
-		assert.deepEqual(oModel.buildBindingParameters({$$inheritExpandSelect : true},
-				aAllowedParams),
-			{$$inheritExpandSelect : true});
-		assert.deepEqual(oModel.buildBindingParameters({$$inheritExpandSelect : false},
-				aAllowedParams),
-			{$$inheritExpandSelect : false});
-	});
-
-	//*********************************************************************************************
-	QUnit.test("buildBindingParameters, $$operationMode", function (assert) {
-		var aAllowedParams = ["$$operationMode"],
-			oModel = createModel();
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$operationMode : "Client"}, aAllowedParams);
-		}, new Error("Unsupported operation mode: Client"));
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$operationMode : SubmitMode.Auto}, aAllowedParams);
-		}, new Error("Unsupported operation mode: Auto"));
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$operationMode : "any"}, aAllowedParams);
-		}, new Error("Unsupported operation mode: any"));
-
-		assert.deepEqual(oModel.buildBindingParameters({$$operationMode : "Server"},
-				aAllowedParams),
-			{$$operationMode : "Server"});
-	});
-
-	//*********************************************************************************************
-	QUnit.test("buildBindingParameters, $$ownRequest", function (assert) {
-		var aAllowedParams = ["$$ownRequest"],
-			oModel = createModel();
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$ownRequest : "foo"}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$ownRequest': foo"));
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$ownRequest : false}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$ownRequest': false"));
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$ownRequest : undefined}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$ownRequest': undefined"));
-
-		assert.deepEqual(oModel.buildBindingParameters({$$ownRequest : true},
-				aAllowedParams),
-			{$$ownRequest : true});
-	});
-
-	//*********************************************************************************************
-	QUnit.test("buildBindingParameters, $$updateGroupId", function (assert) {
-		var aAllowedParams = ["$$updateGroupId"],
-			oModel = createModel();
-
-		assert.deepEqual(oModel.buildBindingParameters({$$updateGroupId : "myGroup"},
-				aAllowedParams),
-			{$$updateGroupId : "myGroup"});
-		assert.deepEqual(oModel.buildBindingParameters(
-			{$$updateGroupId : "$direct", custom : "foo"}, aAllowedParams),
-			{$$updateGroupId : "$direct"});
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$unsupported : "foo"}, aAllowedParams);
-		}, new Error("Unsupported binding parameter: $$unsupported"));
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$updateGroupId : "~invalid"}, aAllowedParams);
-		}, new Error("Unsupported value for binding parameter '$$updateGroupId': ~invalid"));
-	});
-
-	//*********************************************************************************************
-	QUnit.test("buildBindingParameters, unknown $$-parameter", function (assert) {
-		var oModel = createModel();
-
-		assert.throws(function () {
-			oModel.buildBindingParameters({$$someName : "~"}, ["$$someName"]);
-		}, new Error("Unknown binding-specific parameter: $$someName"));
 	});
 
 	//*********************************************************************************************
@@ -1609,32 +1486,36 @@ sap.ui.require([
 
 	//*********************************************************************************************
 	[
-		{severity : undefined, type : MessageType.None},
-		{severity : "error", type : MessageType.Error},
-		{severity : "info", type : MessageType.Information},
-		{severity : "success", type : MessageType.Success},
-		{severity : "warning", type : MessageType.Warning}
+		{numericSeverity : 1, type : MessageType.Success},
+		{numericSeverity : 2, type : MessageType.Information},
+		{numericSeverity : 3, type : MessageType.Warning},
+		{numericSeverity : 4, type : MessageType.Error},
+		{numericSeverity : 0, type : MessageType.None},
+		{numericSeverity : 5, type : MessageType.None},
+		{numericSeverity : null, type : MessageType.None},
+		{numericSeverity : undefined, type : MessageType.None}
 	].forEach(function (oFixture, i) {
 		QUnit.test("reportUnboundMessages, " + i, function (assert) {
 			var aMessages = [{
 					code : 42,
 					message : "foo0",
-					"@Common.LongtextUrl" : "foo/bar0",
-					severity : oFixture.severity
+					longtextUrl : "foo/bar0",
+					numericSeverity : oFixture.numericSeverity
 				}, {
 					code : 78,
 					message : "foo2",
-					"@Common.LongtextUrl" : "",
-					severity : oFixture.severity
+					longtextUrl : "",
+					numericSeverity : oFixture.numericSeverity
 				}, {
 					code : 79,
 					message : "foo3",
-					severity : oFixture.severity
+					numericSeverity : oFixture.numericSeverity
 				}],
-				oModel = createModel();
+				oModel = createModel(),
+				sResourcePath = "Foo('42')/to_Bar";
 
 			this.mock(_Helper).expects("makeAbsolute")
-				.withExactArgs(aMessages[0]["@Common.LongtextUrl"], oModel.sServiceUrl)
+				.withExactArgs(aMessages[0].longtextUrl, oModel.sServiceUrl + sResourcePath)
 				.returns("URL");
 			this.mock(oModel).expects("fireMessageChange")
 				.withExactArgs(sinon.match(function (mArguments) {
@@ -1656,19 +1537,209 @@ sap.ui.require([
 				}));
 
 			// code under test
-			oModel.reportUnboundMessages(aMessages);
+			oModel.reportUnboundMessages(sResourcePath, aMessages);
 
 			// code under test
-			oModel.reportUnboundMessages([]);
+			oModel.reportUnboundMessages(sResourcePath, []);
 
 			// code under test
-			oModel.reportUnboundMessages(null);
+			oModel.reportUnboundMessages(sResourcePath, null);
 
 			// code under test
-			oModel.reportUnboundMessages();
+			oModel.reportUnboundMessages(sResourcePath);
 		});
 	});
+
+	//*********************************************************************************************
+	[
+		{numericSeverity : 1, type : MessageType.Success},
+		{numericSeverity : 2, type : MessageType.Information},
+		{numericSeverity : 3, type : MessageType.Warning},
+		{numericSeverity : 4, type : MessageType.Error},
+		{numericSeverity : 0, type : MessageType.None},
+		{numericSeverity : 5, type : MessageType.None},
+		{numericSeverity : null, type : MessageType.None},
+		{numericSeverity : undefined, type : MessageType.None}
+	].forEach(function (oFixture, i) {
+		QUnit.test("reportBoundMessages, " + i, function (assert) {
+			var aMessages = [{
+					"code" : "F42",
+//					"longtextUrl" : "foo/bar",
+					"message" : "foo0",
+					"numericSeverity" : oFixture.numericSeverity,
+					"target" : "Name",
+					"transient" : false
+				}, {
+					"code" : "UF1",
+//					"longtextUrl" : "",
+					"message" : "foo1",
+					"numericSeverity" : oFixture.numericSeverity,
+					"target" : "",
+					"transient" : true
+				}],
+				oModel = createModel(),
+				oModelMock = this.mock(oModel);
+
+			oModelMock.expects("fireMessageChange")
+				.withExactArgs(sinon.match(function (mArguments) {
+					var aNewMessages = mArguments.newMessages,
+						aOldMessages = mArguments.oldMessages;
+
+					return aNewMessages.length === aMessages.length
+						&& aOldMessages.length === 0
+						&& aNewMessages.every(function (oMessage, j) {
+							return oMessage instanceof Message
+								&& oMessage.getCode() === aMessages[j].code
+//TODO							&& oMessage.getDescriptionUrl() === aMessages[j].longtextUrl
+								&& oMessage.getMessage() === aMessages[j].message
+								&& oMessage.getMessageProcessor() === oModel
+								&& oMessage.getPersistent() === aMessages[j].transient
+								&& oMessage.getTarget() === "/Team('42')/foo/bar"
+									+ (aMessages[j].target ? "/" + aMessages[j].target : "")
+								&& oMessage.getTechnical() === false
+								&& oMessage.getType() === oFixture.type;
+						});
+				}));
+
+			// code under test
+			oModel.reportBoundMessages("Team('42')", {"/foo/bar" : aMessages});
+
+			oModelMock.expects("fireMessageChange").never();
+
+			// code under test
+			oModel.reportBoundMessages("Team('42')", {});
+		});
+	});
+
+	//*********************************************************************************************
+	QUnit.test("reportBoundMessages: remove old messages w/o key predicates", function (assert) {
+		var mMessages = {
+				"/FOO('1')" : [{}, {}],
+				// TODO use Message.getPersistent() instead of Message.persistent?
+				"/FOO('1')/bar" : [{persistent : true}, {}, {persistent : true}, {}],
+				"/FOO('2')" : [{}],
+				"/FOO('3')/NavSingle" : [{}],
+				"/FOO('3')/NavSingle/Name" : [{}, {}],
+				"/FOO('3')/NavSingleBar/Name" : [{}]
+			},
+			oModel = createModel(),
+			oModelMock = this.mock(oModel);
+
+		oModel.mMessages = mMessages;
+
+		oModelMock.expects("fireMessageChange")
+			.withExactArgs(sinon.match.object)
+			.callsFake(function (mArguments) {
+				var aNewMessages = mArguments.newMessages,
+					aOldMessages = mArguments.oldMessages;
+
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')/bar"][0]) < 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')/bar"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')/bar"][2]) < 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')/bar"][3]) >= 0);
+				assert.strictEqual(aNewMessages.length, 0);
+				assert.strictEqual(aOldMessages.length, 4);
+			});
+
+		// code under test
+		oModel.reportBoundMessages("FOO('1')", {});
+
+		oModelMock.expects("fireMessageChange")
+			.withExactArgs(sinon.match.object)
+			.callsFake(function (mArguments) {
+				var aNewMessages = mArguments.newMessages,
+					aOldMessages = mArguments.oldMessages;
+
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingle"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingle/Name"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingle/Name"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingleBar/Name"][0]) < 0);
+				assert.strictEqual(aNewMessages.length, 0);
+				assert.strictEqual(aOldMessages.length, 3);
+			});
+
+		// code under test
+		oModel.reportBoundMessages("FOO('3')/NavSingle", {});
+	});
+
+	//*********************************************************************************************
+	QUnit.test("reportBoundMessages: remove old messages with key predicates", function (assert) {
+		var mMessages = {
+				"/FOO('1')" : [{}, {}],
+				"/FOO('1')/bar" : [{}],
+				"/FOO('2')" : [{persistent : true}, {}, {persistent : true}, {}],
+				"/FOO('3')/NavSingle" : [{}],
+				"/FOO('3')/NavSingle/Name" : [{}, {}],
+				"/FOO('3')/NavSingleBar/Name" : [{}]
+			},
+			oModel = createModel(),
+			oModelMock = this.mock(oModel);
+
+		oModel.mMessages = mMessages;
+		oModelMock.expects("fireMessageChange")
+			.withExactArgs(sinon.match.object)
+			.callsFake(function (mArguments) {
+				var aNewMessages = mArguments.newMessages,
+					aOldMessages = mArguments.oldMessages;
+
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')/bar"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][0]) < 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][2]) < 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][3]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingleBar/Name"][0]) < 0);
+				assert.strictEqual(aNewMessages.length, 0);
+				assert.strictEqual(aOldMessages.length, 5);
+			});
+
+		// code under test - only keys 1 and 2 were read
+		oModel.reportBoundMessages("FOO", {}, ["('1')", "('2')"]);
+	});
+
+	//*********************************************************************************************
+	QUnit.test("reportBoundMessages: remove old messages - complete collection", function (assert) {
+		var mMessages = {
+				"/FOO('1')" : [{}, {}],
+				"/FOO('1')/bar" : [{}],
+				"/FOO('2')" : [{persistent : true}, {}, {persistent : true}, {}],
+				"/FOO('3')/NavSingle" : [{}],
+				"/FOO('3')/NavSingle/Name" : [{}, {}],
+				"/FOO('3')/NavSingleBar/Name" : [{}]
+			},
+			oModel = createModel(),
+			oModelMock = this.mock(oModel);
+
+		oModel.mMessages = mMessages;
+		oModelMock.expects("fireMessageChange")
+			.withExactArgs(sinon.match.object)
+			.callsFake(function (mArguments) {
+				var aNewMessages = mArguments.newMessages,
+					aOldMessages = mArguments.oldMessages;
+
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('1')/bar"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][0]) < 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][2]) < 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('2')"][3]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingle"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingle/Name"][0]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingle/Name"][1]) >= 0);
+				assert.ok(aOldMessages.indexOf(mMessages["/FOO('3')/NavSingleBar/Name"][0]) >= 0);
+				assert.strictEqual(aNewMessages.length, 0);
+				assert.strictEqual(aOldMessages.length, 9);
+			});
+
+		// code under test
+		oModel.reportBoundMessages("FOO", {});
+	});
 });
+
 //TODO constructor: test that the service root URL is absolute?
 //TODO read: support the mParameters context, urlParameters, filters, sorters, batchGroupId
 //TODO read etc.: provide access to "abort" functionality

@@ -3,13 +3,44 @@
  */
 
 // Provides class sap.ui.core.UIArea
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', './RenderManager', 'jquery.sap.act', 'jquery.sap.ui', 'jquery.sap.keycodes', 'jquery.sap.trace'],
-	function(jQuery, ManagedObject, Element, RenderManager /* , jQuerySap1, jQuerySap, jQuerySap2 */) {
+sap.ui.define([
+	'sap/ui/base/ManagedObject',
+	'./Element',
+	'./RenderManager',
+	'sap/ui/performance/trace/Interaction',
+	"sap/ui/dom/containsOrEquals",
+	"sap/ui/util/ActivityDetection",
+	"sap/ui/events/KeyCodes",
+	"sap/base/Log",
+	"sap/base/assert",
+	"sap/ui/performance/Measurement",
+	'sap/ui/events/jquery/EventExtension',
+	"sap/ui/events/ControlEvents",
+	'jquery.sap.ui'
+],
+	function(
+		ManagedObject,
+		Element,
+		RenderManager,
+		Interaction,
+		containsOrEquals,
+		ActivityDetection,
+		KeyCodes,
+		Log,
+		assert,
+		Measurement,
+		EventExtension,
+		ControlEvents,
+		jQuery
+		/* jQuerySapUi */
+	) {
 	"use strict";
 
 
 	//lazy dependency (to avoid cycle)
 	var Control;
+
+	EventExtension.apply();
 
 	/**
 	 * A private logger instance used for 'debugRendering' logging.
@@ -22,8 +53,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 	 * @private
 	 * @todo Add more log output where helpful
 	 */
-	var oRenderLog = jQuery.sap.log.getLogger("sap.ui.Rendering",
-			((window["sap-ui-config"] && window["sap-ui-config"]["xx-debugRendering"]) || /sap-ui-xx-debug(R|-r)endering=(true|x|X)/.test(document.location.search)) ? jQuery.sap.log.Level.DEBUG : Math.min(jQuery.sap.log.Level.INFO, jQuery.sap.log.getLevel())
+	var oRenderLog = Log.getLogger("sap.ui.Rendering",
+			((window["sap-ui-config"] && window["sap-ui-config"]["xx-debugRendering"]) || /sap-ui-xx-debug(R|-r)endering=(true|x|X)/.test(document.location.search)) ? Log.Level.DEBUG : Math.min(Log.Level.INFO, Log.getLevel())
 		),
 		fnDbgWrap = function(oControl) {
 			return oControl;
@@ -142,7 +173,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 			if (oRootNode != null) {
 				this.setRootNode(oRootNode);
 				// Figure out whether UI Area is pre-rendered (server-side JS rendering)!
-				this.bNeedsRerendering = this.bNeedsRerendering && !jQuery.sap.domById(oRootNode.id + "-Init");
+				this.bNeedsRerendering = this.bNeedsRerendering && !((oRootNode.id + "-Init" ? window.document.getElementById(oRootNode.id + "-Init") : null));
 			}
 			this.mInvalidatedControls = {};
 
@@ -212,7 +243,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		}
 
 		// oRootNode must either be empty or must be a DOMElement and must not be root node of some other UIArea
-		jQuery.sap.assert(!oRootNode || (oRootNode.nodeType === 1 && !jQuery(oRootNode).attr("data-sap-ui-area")), "UIArea root node must be a DOMElement");
+		assert(!oRootNode || (oRootNode.nodeType === 1 && !jQuery(oRootNode).attr("data-sap-ui-area")), "UIArea root node must be a DOMElement");
 
 		//TODO IS there something missing
 		if (this.oRootNode) {
@@ -420,7 +451,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 	 * @protected
 	 */
 	UIArea.prototype.isActive = function() {
-		return jQuery.sap.domById(this.getId()) != null;
+		return ((this.getId() ? window.document.getElementById(this.getId()) : null)) != null;
 	};
 
 	/**
@@ -518,9 +549,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		clearRenderingInfo();
 
 		// pause performance measurement for all UI Areas
-		jQuery.sap.measure.pause("renderPendingUIUpdates");
+		Measurement.pause("renderPendingUIUpdates");
 		// start performance measurement
-		jQuery.sap.measure.start(this.getId() + "---rerender","Rerendering of " + this.getMetadata().getName());
+		Measurement.start(this.getId() + "---rerender","Rerendering of " + this.getMetadata().getName());
 
 		fnDbgReport(this, mInvalidatedControls);
 
@@ -569,7 +600,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 					try {
 						this.oCore.oFocusHandler.restoreFocus(oStoredFocusInfo);
 					} catch (e) {
-						jQuery.sap.log.warning("Problems while restoring the focus after full UIArea rendering: " + e, null, this);
+						Log.warning("Problems while restoring the focus after full UIArea rendering: " + e, null, this);
 					}
 				}
 
@@ -632,9 +663,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		// clearRenderingInfo();
 
 		// end performance measurement
-		jQuery.sap.measure.end(this.getId() + "---rerender");
+		Measurement.end(this.getId() + "---rerender");
 		// resume performance measurement for all UI Areas
-		jQuery.sap.measure.resume("renderPendingUIUpdates");
+		Measurement.resume("renderPendingUIUpdates");
 
 		return bUpdated;
 
@@ -669,7 +700,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 			oDomRef = oControl.getDomRef();
 			if (!oDomRef || RenderManager.isPreservedContent(oDomRef) ) {
 				// In case no old DOM node was found or only preserved DOM, search for an 'invisible' placeholder
-				oDomRef = jQuery.sap.domById(RenderManager.RenderPrefixes.Invisible + oControl.getId());
+				oDomRef = (RenderManager.RenderPrefixes.Invisible + oControl.getId() ? window.document.getElementById(RenderManager.RenderPrefixes.Invisible + oControl.getId()) : null);
 			}
 		}
 
@@ -742,7 +773,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		// UIArea instance's scope -> nesting scenario
 		oElement = jQuery(oEvent.target).control(0);
 
-		jQuery.sap.act.refresh();
+		ActivityDetection.refresh();
 
 		if (oElement === null) {
 			return;
@@ -773,7 +804,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		// in case of CRTL+SHIFT+ALT the contextmenu event should not be dispatched
 		// to allow to display the browsers context menu
 		if (oEvent.type === "contextmenu" && oEvent.shiftKey && oEvent.altKey && !!(oEvent.metaKey || oEvent.ctrlKey)) {
-			jQuery.sap.log.info("Suppressed forwarding the contextmenu event as control event because CTRL+SHIFT+ALT is pressed!");
+			Log.info("Suppressed forwarding the contextmenu event as control event because CTRL+SHIFT+ALT is pressed!");
 			return;
 		}
 
@@ -795,10 +826,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 
 		// notify interaction tracing for relevant event - it is important to have evaluated all the previous switches
 		// in case the method would return before dispatching the event, we should not notify an event start
-		if (jQuery.sap.interaction.getActive()) {
+		if (Interaction.getActive()) {
 			bInteractionRelevant = oEvent.type.match(rEvents);
 			if (bInteractionRelevant) {
-				jQuery.sap.interaction.notifyEventStart(oEvent);
+				Interaction.notifyEventStart(oEvent);
 			}
 		}
 
@@ -856,7 +887,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 
 			// Only process the touchend event which is emulated from mouseout event when the current domRef
 			// doesn't equal or contain the relatedTarget
-			if (oEvent.isMarked("fromMouseout") && jQuery.sap.containsOrEquals(oDomRef, oEvent.relatedTarget)) {
+			if (oEvent.isMarked("fromMouseout") && containsOrEquals(oDomRef, oEvent.relatedTarget)) {
 				break;
 			}
 
@@ -877,7 +908,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		});
 
 		if (bInteractionRelevant) {
-			jQuery.sap.interaction.notifyEventEnd(oEvent);
+			Interaction.notifyEventEnd(oEvent);
 		}
 
 		// reset previously changed currentTarget
@@ -890,7 +921,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 
 		// logging: propagation stopped
 		if (oEvent.isPropagationStopped()) {
-			jQuery.sap.log.debug("'" + oEvent.type + "' propagation has been stopped");
+			Log.debug("'" + oEvent.type + "' propagation has been stopped");
 		}
 
 		// logging: prevent the logging of some events that are verbose and for others do some info logging into the console
@@ -898,9 +929,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		if (!mVerboseEvents[sEventName]) {
 			var oElem = jQuery(oEvent.target).control(0);
 			if (oElem) {
-				jQuery.sap.log.debug("Event fired: '" + sEventName + "' on " + oElem, "", "sap.ui.core.UIArea");
+				Log.debug("Event fired: '" + sEventName + "' on " + oElem, "", "sap.ui.core.UIArea");
 			} else {
-				jQuery.sap.log.debug("Event fired: '" + sEventName + "'", "", "sap.ui.core.UIArea");
+				Log.debug("Event fired: '" + sEventName + "'", "", "sap.ui.core.UIArea");
 			}
 		}
 
@@ -963,7 +994,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		}
 
 		// mark the DOM as UIArea and bind the required events
-		jQuery(oDomRef).attr("data-sap-ui-area", oDomRef.id).bind(jQuery.sap.ControlEvents.join(" "), this._handleEvent.bind(this));
+		jQuery(oDomRef).attr("data-sap-ui-area", oDomRef.id).bind(ControlEvents.events.join(" "), this._handleEvent.bind(this));
 
 	};
 
@@ -1018,10 +1049,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 		if (oEvent.type === "focusin") {
 			//check for field group change delayed to allow focus forwarding and resetting focus after selection
 			if (UIArea._iFieldGroupDelayTimer) {
-				jQuery.sap.clearDelayedCall(UIArea._iFieldGroupDelayTimer);
+				clearTimeout(UIArea._iFieldGroupDelayTimer);
 				UIArea._iFieldGroupDelayTimer = null;
 			}
-			UIArea._iFieldGroupDelayTimer = jQuery.sap.delayedCall(0,this, this.setFieldGroupControl,[oElement]);
+			UIArea._iFieldGroupDelayTimer = setTimeout(this.setFieldGroupControl.bind(this, oElement), 0);
 			return true; //no further checks because setFieldGroupControl already looked for a group id and fired the enter and leave events that bubble
 		} else if (this.getFieldGroupControl() &&
 				oEvent.type === "keyup" &&
@@ -1031,7 +1062,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 				oEvent.ctrlKey === oKey.ctrlKey) {
 			//check for field group change (validate) after events where processed by elements
 			if (UIArea._iFieldGroupTriggerDelay) {
-				jQuery.sap.clearDelayedCall(UIArea._iFieldGroupTriggerDelay);
+				clearTimeout(UIArea._iFieldGroupTriggerDelay);
 			}
 			var oCurrentControl = this.getFieldGroupControl(),
 				aCurrentGroupIds = (oCurrentControl ? oCurrentControl._getFieldGroupIds() : []);
@@ -1117,7 +1148,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', './Element', '.
 	UIArea._oFieldGroupControl = null; // group control for all UI areas to handle change of field groups
 	UIArea._iFieldGroupDelayTimer = null; // delay timer for triggering field group changes if focus is forwarded or temporarily dispatched by selection
 	UIArea._oFieldGroupValidationKey = {// keycode and modifier combination that is used to fire a change group event (reason: validate)
-			keyCode : jQuery.sap.KeyCodes.ENTER,
+			keyCode : KeyCodes.ENTER,
 			shiftKey : false,
 			altKey: false,
 			ctrlKey: false

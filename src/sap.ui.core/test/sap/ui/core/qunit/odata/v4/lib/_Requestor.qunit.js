@@ -2,13 +2,14 @@
  * ${copyright}
  */
 sap.ui.require([
-	"jquery.sap.global",
-	"sap/ui/model/odata/v4/lib/_Batch",
-	"sap/ui/model/odata/v4/lib/_GroupLock",
-	"sap/ui/model/odata/v4/lib/_Helper",
-	"sap/ui/model/odata/v4/lib/_Requestor",
-	"sap/ui/test/TestUtils"
-], function (jQuery, _Batch, _GroupLock, _Helper, _Requestor, TestUtils) {
+    "jquery.sap.global",
+    "sap/ui/model/odata/v4/lib/_Batch",
+    "sap/ui/model/odata/v4/lib/_GroupLock",
+    "sap/ui/model/odata/v4/lib/_Helper",
+    "sap/ui/model/odata/v4/lib/_Requestor",
+    "sap/ui/test/TestUtils",
+    "sap/base/Log"
+], function(jQuery, _Batch, _GroupLock, _Helper, _Requestor, TestUtils, Log) {
 	/*global QUnit, sinon */
 	/*eslint max-nested-callbacks: 0, no-warning-comments: 0 */
 	"use strict";
@@ -19,6 +20,7 @@ sap.ui.require([
 			},
 			fnGetGroupProperty : defaultGetGroupProperty,
 			fnOnCreateGroup : function () {},
+			fnReportBoundMessages : function () {},
 			fnReportUnboundMessages : function () {}
 		},
 		sServiceUrl = "/sap/opu/odata4/IWBEP/TEA/default/IWBEP/TEA_BUSI/0001/",
@@ -108,7 +110,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.model.odata.v4.lib._Requestor", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 
@@ -342,6 +344,7 @@ sap.ui.require([
 					assert.strictEqual(oPayload.contentType, "application/json");
 					assert.strictEqual(oPayload.body, oResponsePayload);
 					assert.strictEqual(oPayload.messages, "[{code : 42}]");
+					assert.strictEqual(oPayload.resourcePath, "foo");
 				}, function (oError0) {
 					assert.ok(!bSuccess, "certain failure");
 					assert.strictEqual(oError0, o.bReadFails ? oReadFailure : oError);
@@ -517,7 +520,7 @@ sap.ui.require([
 				oRequestor = _Requestor.create(sServiceUrl, oModelInterface, undefined, {
 					"foo" : "URL params are ignored for normal requests"
 				}),
-				oResponse = {body : {}, messages : {}},
+				oResponse = {body : {}, messages : {}, resourcePath : "Employees?custom=value"},
 				fnSubmit = this.spy();
 
 			if (oGroupLock) {
@@ -535,7 +538,7 @@ sap.ui.require([
 					}, JSON.stringify(oChangedPayload))
 				.resolves(oResponse);
 			this.mock(oRequestor).expects("reportUnboundMessages")
-				.withExactArgs(sinon.match.same(oResponse.messages));
+				.withExactArgs(oResponse.resourcePath, sinon.match.same(oResponse.messages));
 			this.mock(oRequestor).expects("doConvertResponse")
 				.withExactArgs(sinon.match.same(oResponse.body), "meta/path")
 				.returns(oConvertedResponse);
@@ -1244,7 +1247,7 @@ sap.ui.require([
 					new _GroupLock("group1"));
 
 			oRequestorMock.expects("reportUnboundMessages")
-				.withExactArgs(sinon.match.same(mHeaders["sap-message"]));
+				.withExactArgs("Products(42)", sinon.match.same(mHeaders["sap-message"]));
 			oRequestorMock.expects("sendBatch") // arguments don't matter
 				.resolves([createResponse(oFixture.response, mHeaders)]);
 
@@ -2204,7 +2207,7 @@ sap.ui.require([
 		var oPromise = {},
 			oRequestor = _Requestor.create("/", oModelInterface);
 
-		this.mock(oModelInterface).expects("fnFetchMetadata")
+		this.mock(oRequestor).expects("fetchMetadata")
 			.withExactArgs("/EMPLOYEES/EMPLOYEE_2_TEAM/").returns(oPromise);
 
 		// code under test
@@ -2216,7 +2219,7 @@ sap.ui.require([
 		var oPromise = {},
 			oRequestor = _Requestor.create("/", oModelInterface);
 
-		this.mock(oModelInterface).expects("fnFetchMetadata")
+		this.mock(oRequestor).expects("fetchMetadata")
 			.withExactArgs("/EMPLOYEES/EMPLOYEE_2_TEAM/$Type").returns(oPromise);
 
 		// code under test
@@ -2497,15 +2500,30 @@ sap.ui.require([
 	});
 
 	//*****************************************************************************************
-	QUnit.test("reportUnboundMessages", function (assert) {
-		var sMessages = '[{"code" : "42"}]',
+	QUnit.test("fetchMetadata", function (assert) {
+		var sPath = {/*{string} any metadata path */},
+			oPromise = {},
 			oRequestor = _Requestor.create("/", oModelInterface);
 
-		this.mock(oModelInterface).expects("fnReportUnboundMessages")
-			.withExactArgs([{code : "42"}]);
+		this.mock(oModelInterface).expects("fnFetchMetadata")
+			.withExactArgs(sinon.match.same(sPath))
+			.returns(oPromise);
 
 		// code under test
-		oRequestor.reportUnboundMessages(sMessages);
+		assert.strictEqual(oRequestor.fetchMetadata(sPath), oPromise);
+	});
+
+	//*****************************************************************************************
+	QUnit.test("reportUnboundMessages", function (assert) {
+		var sMessages = '[{"code" : "42"}]',
+			oRequestor = _Requestor.create("/", oModelInterface),
+			sResourcePath = "Procduct(42)/to_bar";
+
+		this.mock(oModelInterface).expects("fnReportUnboundMessages")
+			.withExactArgs(sResourcePath, [{code : "42"}]);
+
+		// code under test
+		oRequestor.reportUnboundMessages(sResourcePath, sMessages);
 	});
 
 	//*****************************************************************************************
@@ -2513,10 +2531,25 @@ sap.ui.require([
 		var oRequestor = _Requestor.create("/", oModelInterface);
 
 		this.mock(oModelInterface).expects("fnReportUnboundMessages")
-			.withExactArgs(null);
+			.withExactArgs("foo(42)/to_bar", null);
 
 		// code under test
-		oRequestor.reportUnboundMessages();
+		oRequestor.reportUnboundMessages("foo(42)/to_bar");
+	});
+
+	//*****************************************************************************************
+	QUnit.test("reportBoundMessages", function (assert) {
+		var aKeyPredicates = [/*any array of key predicates*/],
+			mPathToMessages = {/*any map of resource path to message object*/},
+			oRequestor = _Requestor.create("/", oModelInterface),
+			sResourcePath = {/*{string} any resource path*/};
+
+		this.mock(oModelInterface).expects("fnReportBoundMessages")
+			.withExactArgs(sinon.match.same(sResourcePath), sinon.match.same(mPathToMessages),
+				sinon.match.same(aKeyPredicates));
+
+		// code under test
+		oRequestor.reportBoundMessages(sResourcePath, mPathToMessages, aKeyPredicates);
 	});
 });
 // TODO: continue-on-error? -> flag on model

@@ -2,9 +2,14 @@
  * ${copyright}
  */
 
-sap.ui.define(["jquery.sap.global", "sap/ui/test/_LogCollector"], function ($, _LogCollector) {
+sap.ui.define([
+	"sap/ui/test/_LogCollector",
+	"sap/base/Log",
+	"sap/base/strings/capitalize",
+	"sap/ui/thirdparty/jquery"
+], function (_LogCollector, Log, capitalize, jQueryDOM) {
 	"use strict";
-	var oLogger = $.sap.log.getLogger("sap.ui.test.matchers.Properties", _LogCollector.DEFAULT_LEVEL_FOR_OPA_LOGGERS);
+	var oLogger = Log.getLogger("sap.ui.test.matchers.Properties", _LogCollector.DEFAULT_LEVEL_FOR_OPA_LOGGERS);
 
 	/**
 	 * @class Properties - checks if a control's properties have the provided values - all properties have to match their values.
@@ -28,8 +33,8 @@ sap.ui.define(["jquery.sap.global", "sap/ui/test/_LogCollector"], function ($, _
 	return function (oProperties) {
 		return function (oControl) {
 			var bIsMatching = true;
-			$.each(oProperties, function(sPropertyName, oPropertyValue) {
-				var fnProperty = oControl["get" + $.sap.charToUpperCase(sPropertyName, 0)];
+			jQueryDOM.each(oProperties, function(sPropertyName, oPropertyValue) {
+				var fnProperty = oControl["get" + capitalize(sPropertyName, 0)];
 
 				if (!fnProperty) {
 					bIsMatching = false;

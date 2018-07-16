@@ -70,7 +70,7 @@
 	// time to wait for server responses
 	var timeout = 3000;
 	var sURI = "http://services.odata.org/V3/Northwind/Northwind.svc/";
-	sURI = "../../../../../proxy/http/" + sURI.replace("http://","");
+	sURI = "/proxy/http/" + sURI.replace("http://","");
 
 	var oLabel = new sap.ui.commons.Label("myLabel");
 	var oPanel = new sap.ui.commons.Panel();
@@ -169,6 +169,8 @@
 		oModel.update("Products(1)", {});
 		oModel.create("Products(1)", {});
 	});
+
+	QUnit.module("v2.OdataModel");
 
 	QUnit.test("test metadata and 'complex' namespace - 'some.name.space'", function(assert){
 		var done = assert.async();
@@ -3020,6 +3022,7 @@
 
 	QUnit.test("async test createEntity", function(assert){
 		var done = assert.async();
+		assert.expect(18);
 		var oSpy;
 		var oModel = initModel(sURI, {
 			json: true,
@@ -3067,10 +3070,10 @@
 			oSpy = sinon.spy(oModel, "_submitBatchRequest");
 			oModel.submitChanges();
 			jQuery.sap.delayedCall(0,this, function() {
-				assert.ok(oSpy.callCount == 0, "No request sent");
+				assert.equal(oSpy.callCount, 0, "No request sent");
 				oSpy.restore();
 				oModel.destroy();
-				start()
+				done();
 			});
 		};
 		oBinding.attachChange(handler);
@@ -3112,7 +3115,6 @@
 					assert.ok(mParameters.headers, sId + " contains headers");
 					assert.ok(mParameters.response, sId + " contains response");
 					assert.ok(mParameters.response.statusCode !== undefined, sId + " contains response.statusCode");
-					assert.ok(mParameters.response.statusText, sId + " contains response.statusText");
 					assert.ok(mParameters.response.headers, sId + " contains response.headers");
 					assert.ok(mParameters.response.responseText !== undefined, sId + " contains response.responseText");
 					break;
@@ -3127,7 +3129,6 @@
 					assert.ok(mParameters.headers, sId + " contains headers");
 					assert.ok(mParameters.response, sId + " contains response");
 					assert.ok(mParameters.response.statusCode !== undefined, sId + " contains response.statusCode");
-					assert.ok(mParameters.response.statusText, sId + " contains response.statusText");
 					assert.ok(mParameters.response.headers, sId + " contains response.headers");
 					assert.ok(mParameters.response.responseText !== undefined, sId + " contains response.responseText");
 					assert.ok(mParameters.success !== undefined, sId + " contains success");
@@ -4338,7 +4339,7 @@
 		var spy = sinon.spy(OData, "request");
 		var oModel = initModel(sURI);
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata","no metadata url parameters");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata","no metadata url parameters");
 			OData.request.restore();
 			done();
 		});
@@ -4348,7 +4349,7 @@
 		var spy = sinon.spy(OData, "request");
 		var oModel = initModel(sURI+'?test=x');
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x","parameters of service url attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x","parameters of service url attached");
 			OData.request.restore();
 			done();
 		});
@@ -4358,7 +4359,7 @@
 		var spy = sinon.spy(OData, "request");
 		oModel = initModel(sURI, {metadataUrlParams: {"sap-language":"en", "test2":"xx"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-language=en&test2=xx","metadataUrlParams attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-language=en&test2=xx","metadataUrlParams attached");
 			OData.request.restore();
 			done();
 		});
@@ -4368,7 +4369,7 @@
 		var spy = sinon.spy(OData, "request");
 		oModel = initModel(sURI+'?test=x', {metadataUrlParams: {"sap-language":"en", "test2":"xx"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x&sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x&sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
 			OData.request.restore();
 			done();
 		});
@@ -4379,7 +4380,7 @@
 		var spy = sinon.spy(OData, "request");
 		var oModel = initModel(sURI, {serviceUrlParams: {"hubel":"dubel"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata","no metadata url parameters");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata","no metadata url parameters");
 			OData.request.restore();
 			done();
 		});
@@ -4390,7 +4391,7 @@
 		var spy = sinon.spy(OData, "request");
 		var oModel = initModel(sURI+'?test=x', {serviceUrlParams: {"hubel":"dubel"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x","parameters of service url attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x","parameters of service url attached");
 			OData.request.restore();
 			done();
 		});
@@ -4401,7 +4402,7 @@
 		var spy = sinon.spy(OData, "request");
 		oModel = initModel(sURI, {serviceUrlParams: {"hubel":"dubel"}, metadataUrlParams: {"sap-language":"en", "test2":"xx"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-language=en&test2=xx","metadataUrlParams attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-language=en&test2=xx","metadataUrlParams attached");
 			OData.request.restore();
 			done();
 		});
@@ -4411,7 +4412,7 @@
 		var spy = sinon.spy(OData, "request");
 		oModel = initModel(sURI+'?test=x', {serviceUrlParams: {"hubel":"dubel"}, metadataUrlParams: {"sap-language":"en", "test2":"xx"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x&sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x&sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
 			OData.request.restore();
 			done();
 		});
@@ -4423,7 +4424,7 @@
 		var spy = sinon.spy(OData, "request");
 		oModel = initModel(sURI+'?test=x', {json: false, serviceUrlParams: {"hubel":"dubel"}, metadataUrlParams: {"sap-language":"en", "test2":"xx"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x&sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?test=x&sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
 			OData.request.restore();
 			spy = sinon.spy(OData, "request");
 			oModel.read("/Categories", {success: function(oData, oResponse) {
@@ -4443,7 +4444,7 @@
 		var spy = sinon.spy(OData, "request");
 		oModel = initModel(sURI, {json: false, serviceUrlParams: {"hubel":"dubel"}, metadataUrlParams: {"sap-language":"en", "test2":"xx"}});
 		oModel.attachMetadataLoaded(function() {
-			assert.equal(spy.args[0][0].requestUri,"../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
+			assert.equal(spy.args[0][0].requestUri,"/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-language=en&test2=xx","parameters of service url and metadataUrlParams attached");
 			OData.request.restore();
 			spy = sinon.spy(OData, "request");
 			oModel.read("/Categories", {success: function(oData, oResponse) {
@@ -5126,6 +5127,7 @@
 				assert.ok(!oInfo.getParameter('success'), "request should fail");
 				assert.ok(oInfo.getParameter('method') == 'POST', 'method should be POST');
 				assert.ok(spy.args[0][0].created, "request flagged as created");
+                assert.notOk(spy.args[0][0].data.__metadata.uri, "create request: generated uri must not be part of __metadata");
 			};
 			var fnFailed = function(oInfo) {
 				that.oModel.detachRequestFailed(fnFailed);
@@ -6305,13 +6307,13 @@
 		this.oModel.metadataLoaded()
 			.then(function(oMetadata) {
 				assert.ok(this.oModel.oMetadata.sCacheKey, "caching enabled");
-				assert.equal(this.oModel.oMetadata.sCacheKey, "../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token", "cacheKey set");
+				assert.equal(this.oModel.oMetadata.sCacheKey, "/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token", "cacheKey set");
 				done();
 			}.bind(this));
 		this.oModel.annotationsLoaded()
 			.then(function(oAnnotations) {
 				assert.ok(this.oModel.oAnnotations.sCacheKey, "caching not enabled");
-				assert.equal(this.oModel.oAnnotations.sCacheKey, "../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token#annotations", "cacheKey set");
+				assert.equal(this.oModel.oAnnotations.sCacheKey, "/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token#annotations", "cacheKey set");
 			}.bind(this));
 	});
 
@@ -6341,13 +6343,13 @@
 		this.oModel.metadataLoaded()
 			.then(function(oMetadata) {
 				assert.ok(this.oModel.oMetadata.sCacheKey, "caching enabled");
-				assert.equal(this.oModel.oMetadata.sCacheKey, "../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token", "cacheKey set");
+				assert.equal(this.oModel.oMetadata.sCacheKey, "/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token", "cacheKey set");
 				done();
 			}.bind(this));
 		this.oModel.annotationsLoaded()
 			.then(function(oAnnotations) {
 				assert.ok(this.oModel.oAnnotations.sCacheKey, "caching enabled");
-				assert.equal(this.oModel.oAnnotations.sCacheKey, "../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token#annotations_/test/~201801171629~/someAnnotation.xml#annotations", "cacheKey set");
+				assert.equal(this.oModel.oAnnotations.sCacheKey, "/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/$metadata?sap-context-token=test-token#annotations_/test/~201801171629~/someAnnotation.xml#annotations", "cacheKey set");
 			}.bind(this));
 	});
 
@@ -6366,6 +6368,172 @@
 				assert.ok(!this.oModel.oAnnotations.sCacheKey, "caching disabled");
 			}.bind(this));
 	});
+
+	QUnit.module("sap-cancel-on-close header handling", {
+		beforeEach: function() {
+			this.spy = sinon.spy(OData.defaultHttpClient, "request");
+		},
+		afterEach: function() {
+			this.spy.restore();
+			this.oModel.destroy();
+			delete this.oModel;
+		}
+	});
+
+	QUnit.test("Default behavior - dynamic", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI);
+		this.oModel.read("/Categories");
+		this.oModel.attachRequestCompleted(function(oRequest){
+			assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on single request.");
+			done();
+		}.bind(this));
+	});
+
+	QUnit.test("Default behavior - dynamic - batch", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI, {useBatch: true});
+
+		var firstRead = function(oRequest){
+			this.oModel.detachBatchRequestCompleted(firstRead);
+			assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on batch request.");
+			assert.equal(oRequest.getParameter("requests")[0].headers["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on single request.");
+
+			this.oModel.read("/Categories(1)");
+			this.oModel.remove("/Categories(1)");
+			this.oModel.attachBatchRequestCompleted(function(oRequest){
+				var aRequests = oRequest.getParameter("requests");
+				assert.equal(oRequest.getParameter('headers')["sap-cancel-on-close"], false, "sap-cancel-on-close header was set correctly on batch request.");
+				assert.equal(aRequests[0].headers["sap-cancel-on-close"], false, "sap-cancel-on-close header was set correctly on single request.");
+				assert.equal(aRequests[1].headers["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on single request.");
+				done();
+			}.bind(this));
+		}.bind(this);
+
+		this.oModel.attachMetadataLoaded(this, function(){
+			assert.strictEqual(this.spy.getCalls()[1].args[0].method, "HEAD", "Security token request found.");
+			assert.equal(this.spy.getCalls()[1].args[0].headers["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on security token request.");
+		}.bind(this));
+		this.oModel.read("/Categories");
+		this.oModel.attachBatchRequestCompleted(firstRead)
+	});
+
+	QUnit.test("Set to true via Model contructor parameter", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI, {headers: {"sap-cancel-on-close": true}});
+		this.oModel.refreshSecurityToken(function(){
+			assert.strictEqual(this.spy.getCalls()[1].args[0].method, "HEAD", "Security token request found.");
+			assert.equal(this.spy.getCalls()[1].args[0].headers["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on security token request.");
+		}.bind(this));
+		this.oModel.read("/Categories");
+		this.oModel.attachRequestCompleted(function(oRequest){
+			assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on single request.");
+			done();
+		}.bind(this));
+	});
+
+
+	QUnit.test("Set to false via Model contructor parameter", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI, {headers: {"sap-cancel-on-close": false}});
+		this.oModel.refreshSecurityToken(function(){
+			assert.strictEqual(this.spy.getCalls()[1].args[0].method, "HEAD", "Security token request found.");
+			assert.equal(this.spy.getCalls()[1].args[0].headers["sap-cancel-on-close"], false, "sap-cancel-on-close header was set correctly on security token request.");
+		}.bind(this));
+		this.oModel.read("/Categories");
+		this.oModel.attachRequestCompleted(function(oRequest){
+				assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], false, "sap-cancel-on-close header was set correctly on single request.");
+				done();
+			}.bind(this));
+	});
+
+	QUnit.test("Set to true via setHeader API parameter", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI);
+		this.oModel.setHeaders({"sap-cancel-on-close": true});
+		this.oModel.refreshSecurityToken(function(){
+			assert.strictEqual(this.spy.getCalls()[1].args[0].method, "HEAD", "Security token request found.");
+			assert.equal(this.spy.getCalls()[1].args[0].headers["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on security token request.");
+		}.bind(this));
+		this.oModel.read("/Categories");
+		this.oModel.attachRequestCompleted(function(oRequest){
+			assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on single request.");
+			done();
+		}.bind(this));
+	});
+
+
+	QUnit.test("Set to false via setHeader API parameter", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI);
+		this.oModel.setHeaders({"sap-cancel-on-close": false});
+		this.oModel.refreshSecurityToken(function(){
+			assert.strictEqual(this.spy.getCalls()[1].args[0].method, "HEAD", "Security token request found.");
+			assert.equal(this.spy.getCalls()[1].args[0].headers["sap-cancel-on-close"], false, "sap-cancel-on-close header was set correctly on security token request.");
+		}.bind(this));
+		this.oModel.read("/Categories");
+		this.oModel.attachRequestCompleted(function(oRequest){
+				assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], false, "sap-cancel-on-close header was set correctly on single request.");
+				done();
+			}.bind(this));
+	});
+
+
+	QUnit.test("Set to true via read API parameter", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI);
+		this.oModel.read("/Categories", {headers: {"sap-cancel-on-close": true}});
+		this.oModel.attachRequestCompleted(function(oRequest){
+				assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on single request.");
+				this.oModel.refreshSecurityToken(function(){
+					assert.strictEqual(this.spy.getCalls()[2].args[0].method, "HEAD", "Security token request found.");
+					assert.equal(this.spy.getCalls()[2].args[0].headers["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on security token request.");
+					done();
+			}.bind(this));
+		}.bind(this));
+	});
+
+	QUnit.test("Set to false via read API parameter", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI);
+		this.oModel.read("/Categories", {headers: {"sap-cancel-on-close": false}});
+		this.oModel.attachRequestCompleted(function(oRequest){
+				assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], false, "sap-cancel-on-close header was set correctly on single request.");
+				this.oModel.refreshSecurityToken(function(){
+					debugger;
+					assert.strictEqual(this.spy.getCalls()[2].args[0].method, "HEAD", "Security token request found.");
+					assert.equal(this.spy.getCalls()[2].args[0].headers["sap-cancel-on-close"], true, "sap-cancel-on-close header was set correctly on security token request.");
+					done();
+				}.bind(this));
+			}.bind(this));
+	});
+
+
+	QUnit.test("Check setter priority", function(){
+		var done = assert.async();
+		this.oModel = initModel(sURI, {headers: {"sap-cancel-on-close": true}});
+		this.oModel.setHeaders({"sap-cancel-on-close": false});
+		
+		var fnFirstRead = function(oRequest){
+			this.oModel.detachRequestCompleted(fnFirstRead);
+			assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], false, "Set header API overrides constructor parameter.");
+
+			var fnSecondRead = function(oRequest){
+				this.oModel.detachRequestCompleted(fnSecondRead);
+				assert.equal(oRequest.getParameter("headers")["sap-cancel-on-close"], true, "API parameter is of highest prio.");
+				done();
+			}.bind(this);
+			
+			this.oModel.attachRequestCompleted(fnSecondRead);
+			
+			this.oModel.read("/Categories", {headers: {"sap-cancel-on-close": true}});
+			
+		}.bind(this);
+
+		this.oModel.attachRequestCompleted(fnFirstRead);
+		this.oModel.read("/Categories");
+	});
+
 
 </script>
 

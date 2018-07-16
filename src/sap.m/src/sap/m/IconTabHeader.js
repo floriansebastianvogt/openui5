@@ -5,7 +5,6 @@
 // Provides control sap.m.IconTabHeader.
 
 sap.ui.define([
-	'jquery.sap.global',
 	'./library',
 	'sap/ui/core/Control',
 	'sap/ui/core/EnabledPropagator',
@@ -20,12 +19,11 @@ sap.ui.define([
 	'sap/ui/core/ResizeHandler',
 	'sap/ui/core/Icon',
 	'./IconTabBarDragAndDropUtil',
-	'sap/ui/core/dnd/DragInfo',
-	'sap/ui/core/dnd/DropInfo',
-	'./IconTabHeaderRenderer'
+	'./IconTabHeaderRenderer',
+	"sap/ui/thirdparty/jquery",
+	"sap/base/Log"
 ],
 function(
-	jQuery,
 	library,
 	Control,
 	EnabledPropagator,
@@ -40,9 +38,9 @@ function(
 	ResizeHandler,
 	Icon,
 	IconTabBarDragAndDropUtil,
-	DragInfo,
-	DropInfo,
-	IconTabHeaderRenderer
+	IconTabHeaderRenderer,
+	jQueryDOM,
+	Log
 ) {
 	"use strict";
 
@@ -164,7 +162,12 @@ function(
 			/**
 			 * The items displayed in the IconTabHeader.
 			 */
-			items : {type : "sap.m.IconTab", multiple : true, singularName : "item", dnd : {draggable: true, droppable: true, layout: "Horizontal"} }
+			items : {type : "sap.m.IconTab", multiple : true, singularName : "item", dnd : {draggable: true, droppable: true, layout: "Horizontal"} },
+
+			/**
+			 * Internal aggregation for managing the overflow button.
+			 */
+			_overflowButton : {type : "sap.m.Button", multiple : false, visibility : "hidden"}
 		},
 		events : {
 
@@ -258,16 +261,20 @@ function(
 	 * @private
 	 */
 	IconTabHeader.prototype._getOverflowButton = function () {
-		if (!this._oOverflowButton) {
-			this._oOverflowButton = new Button({
+		var oOverflowButton = this.getAggregation("_overflowButton");
+
+		if (!oOverflowButton) {
+			oOverflowButton = new Button({
 				id: this.getId() + '-overflow',
 				icon: "sap-icon://slim-arrow-down",
 				type: ButtonType.Transparent,
 				press: this._overflowButtonPress.bind(this)
 			});
+			oOverflowButton.addEventDelegate(this._onOverflowButtonEventDelegate);
+			this.setAggregation("_overflowButton", oOverflowButton);
 		}
 
-		return this._oOverflowButton;
+		return oOverflowButton;
 	};
 
 	/**
@@ -500,22 +507,42 @@ function(
 			this._oPopover.destroy();
 			this._oPopover = null;
 		}
+	};
 
-		if (this._oOverflowButton) {
-			this._oOverflowButton.removeEventDelegate(this._onDragOverEventDelegate);
-			this._oOverflowButton.destroy();
-			this._oOverflowButton = null;
+	/**
+	 * Handles onLongDragOver of overflow button.
+	 * @private
+	 */
+	IconTabHeader.prototype._handleOnLongDragOver = function() {
+		if (!this._oPopover || !this._oPopover.isOpen()) {
+			this._overflowButtonPress();
 		}
 	};
 
 	/**
-	 * Handles onDragOver of overflow button.
+	 * Handles onDragOver of the overflow button.
+	 * @private
+	 * @param {jQuery.Event} oEvent The jQuery drag over event
+	 */
+	IconTabHeader.prototype._handleOnDragOver = function(oEvent) {
+		this._getOverflowButton().addStyleClass("sapMBtnDragOver");
+		oEvent.preventDefault(); // allow drop, so that the cursor is correct
+	};
+
+	/**
+	 * Handles onDrop of the overflow button.
 	 * @private
 	 */
-	IconTabHeader.prototype._handlesOnDragOver = function() {
-		if (!this._oPopover || !this._oPopover.isOpen()) {
-			this._overflowButtonPress();
-		}
+	IconTabHeader.prototype._handleOnDrop = function() {
+		this._getOverflowButton().removeStyleClass("sapMBtnDragOver");
+	};
+
+	/**
+	 * Handles onDragLeave of the overflow button.
+	 * @private
+	 */
+	IconTabHeader.prototype._handleOnDragLeave = function() {
+		this._getOverflowButton().removeStyleClass("sapMBtnDragOver");
 	};
 
 	/**
@@ -523,17 +550,12 @@ function(
 	 * @private
 	 */
 	IconTabHeader.prototype._setsDragAndDropConfigurations = function() {
-		var oOverflowButton = this._getOverflowButton();
-
 		if (!this.getEnableTabReordering() && this.getDragDropConfig().length) {
 			//Destroying Drag&Drop aggregation
 			this.destroyDragDropConfig();
 		} else if (this.getEnableTabReordering() && !this.getDragDropConfig().length) {
-
-			//open select list when drag element is over it
-			oOverflowButton.addEventDelegate(this._onDragOverEventDelegate);
 			//Adding Drag&Drop configuration to the dragDropConfig aggregation if needed
-			IconTabBarDragAndDropUtil.setDragDropAggregations(this, DragInfo, DropInfo, "Horizontal");
+			IconTabBarDragAndDropUtil.setDragDropAggregations(this, "Horizontal");
 		}
 	};
 
@@ -545,8 +567,11 @@ function(
 			bIsParentIconTabBar = oParent instanceof sap.m.IconTabBar,
 			bIsParentToolHeader = oParent && oParent.getMetadata().getName() == 'sap.tnt.ToolHeader';
 			this._bRtl = sap.ui.getCore().getConfiguration().getRTL();
-			this._onDragOverEventDelegate = {
-				ondragover: this._handlesOnDragOver.bind(this)
+			this._onOverflowButtonEventDelegate = {
+				onlongdragover: this._handleOnLongDragOver.bind(this),
+				ondragover: this._handleOnDragOver.bind(this),
+				ondragleave: this._handleOnDragLeave.bind(this),
+				ondrop: this._handleOnDrop.bind(this)
 			};
 
 		if (this._sResizeListenerId) {
@@ -596,12 +621,6 @@ function(
 		this._oScroller.setHorizontal(!this._isTouchScrollingDisabled && (!this.getEnableTabReordering() || !Device.system.desktop));
 
 		this._setsDragAndDropConfigurations();
-
-		// Deregister resize event before re-rendering
-		if (this._sResizeListenerNoFlexboxSupportId) {
-			ResizeHandler.deregister(this._sResizeListenerNoFlexboxSupportId);
-			this._sResizeListenerNoFlexboxSupportId = null;
-		}
 	};
 
 	/**
@@ -886,7 +905,7 @@ function(
 					.attr({ 'aria-selected': true });
 		}
 
-		jQuery.sap.delayedCall(350, this, "_checkOverflow");
+		setTimeout(this["_checkOverflow"].bind(this), 350);
 
 		// scroll to selected item if it is out of screen and we render the control the first time
 		if (this.oSelectedItem) {
@@ -902,14 +921,6 @@ function(
 
 		//listen to resize
 		this._sResizeListenerId = ResizeHandler.register(this.getDomRef(),  jQuery.proxy(this._fnResize, this));
-
-		// Change ITB content height on resize when ITB stretchContentHeight is set to true (IE9 fix)
-		if (!jQuery.support.newFlexBoxLayout &&
-			bIsParentIconTabBar &&
-			oParent.getStretchContentHeight()) {
-			this._sResizeListenerNoFlexboxSupportId = ResizeHandler.register(oParent.getDomRef(), jQuery.proxy(this._fnResizeNoFlexboxSupport, this));
-			this._fnResizeNoFlexboxSupport();
-		}
 
 		this._bCheckIfIntoView = true;
 	};
@@ -928,7 +939,7 @@ function(
 			var sKey = oItem.getKey();
 			// check if key is a duplicate
 			if (this._aTabKeys.indexOf(sKey) !== -1) {
-				jQuery.sap.log.warning("sap.m.IconTabHeader: duplicate key '" + sKey + "' inside the IconTabFilter. Please use unique keys.");
+				Log.warning("sap.m.IconTabHeader: duplicate key '" + sKey + "' inside the IconTabFilter. Please use unique keys.");
 			}
 			this._aTabKeys.push(sKey);
 		}
@@ -940,7 +951,7 @@ function(
 			var sKey = oItem.getKey();
 			//check if key is a duplicate
 			if (this._aTabKeys.indexOf(sKey) !== -1) {
-				jQuery.sap.log.warning("sap.m.IconTabHeader: duplicate key '" + sKey + "' inside the IconTabFilter. Please use unique keys.");
+				Log.warning("sap.m.IconTabHeader: duplicate key '" + sKey + "' inside the IconTabFilter. Please use unique keys.");
 			}
 			this._aTabKeys.push(sKey);
 		}
@@ -1231,7 +1242,7 @@ function(
 			return;
 		}
 
-		var $sTargetId = jQuery.sap.byId(sTargetId);
+		var $sTargetId = jQueryDOM(document.getElementById(sTargetId));
 		/*eslint-disable no-empty */
 		// TODO check better implementation
 		if (jQuery.inArray(this.$("content")[0], $sTargetId.parents()) > -1) {
@@ -1242,7 +1253,7 @@ function(
 				var sId = this.getId();
 
 				// For items: do not navigate away! Stay on the page and handle the click in-place. Right-click + "Open in new Tab" still works.
-				// For scroll buttons: Prevent IE from firing beforeunload event -> see CSN 4378288 2012
+				// For scroll buttons: Prevent IE from firing beforeunload event -> see CSN 4378288 2012// TODO remove after 1.62 version
 				oEvent.preventDefault();
 
 				//on mobile devices click on arrows has no effect
@@ -1253,8 +1264,8 @@ function(
 					}
 					// execute manual scrolling with iScroll's scrollTo method (delayedCall 0 is needed for positioning glitch)
 					this._scrollPreparation();
-					jQuery.sap.delayedCall(0, this._oScroller, "scrollTo", [iScrollLeft, 0, 500]);
-					jQuery.sap.delayedCall(500, this, "_afterIscroll");
+					setTimeout(this._oScroller["scrollTo"].bind(this._oScroller, iScrollLeft, 0, 500), 0);
+					setTimeout(this["_afterIscroll"].bind(this), 500);
 
 				} else if (sTargetId == sId + "-arrowScrollRight" && Device.system.desktop) {
 					var iScrollLeft = this._oScroller.getScrollLeft() + IconTabHeader.SCROLL_STEP;
@@ -1265,8 +1276,8 @@ function(
 					}
 					// execute manual scrolling with iScroll's scrollTo method (delayedCall 0 is needed for positioning glitch)
 					this._scrollPreparation();
-					jQuery.sap.delayedCall(0, this._oScroller, "scrollTo", [iScrollLeft, 0, 500]);
-					jQuery.sap.delayedCall(500, this, "_afterIscroll");
+					setTimeout(this._oScroller["scrollTo"].bind(this._oScroller, iScrollLeft, 0, 500), 0);
+					setTimeout(this["_afterIscroll"].bind(this), 500);
 				} else {
 
 					// should be one of the items - select it
@@ -1331,8 +1342,8 @@ function(
 				this._scrollPreparation();
 				// store current scroll state to set it after rerendering
 				this._iCurrentScrollLeft = iNewScrollLeft;
-				jQuery.sap.delayedCall(0, this._oScroller, "scrollTo", [iNewScrollLeft, 0, iDuration]);
-				jQuery.sap.delayedCall(iDuration, this, "_afterIscroll");
+				setTimeout(this._oScroller["scrollTo"].bind(this._oScroller, iNewScrollLeft, 0, iDuration), 0);
+				setTimeout(this["_afterIscroll"].bind(this), iDuration);
 			}
 		}
 
@@ -1351,8 +1362,8 @@ function(
 
 		var oDomRef = this.getDomRef("head");
 		var iScrollLeft = oDomRef.scrollLeft;
-		var bIsIE = Device.browser.msie || Device.browser.edge;
-		if (!bIsIE && this._bRtl) {
+		var bIsIE = Device.browser.msie || Device.browser.edge;// TODO remove after 1.62 version
+		if (!bIsIE && this._bRtl) {// TODO remove after 1.62 version
 			iDelta = -iDelta;
 		} // RTL lives in the negative space
 		var iScrollTarget = iScrollLeft + iDelta;
@@ -1410,19 +1421,6 @@ function(
 		}
 
 		this._setTabsVisibility();
-	};
-
-	/**
-	 * Resize handler for ITB content inside FixFlex layout (IE9 fix)
-	 * Calculate height on the content
-	 * @private
-	 */
-	IconTabHeader.prototype._fnResizeNoFlexboxSupport = function() {
-		var $content = this.getParent().$("containerContent"),
-			iDiffOuterInnerHeight = $content.outerHeight(true) - $content.height();
-
-		// calculate and set content div height
-		$content.height(this.getParent().$().height() - $content.position().top - iDiffOuterInnerHeight);
 	};
 
 	/**
@@ -1525,14 +1523,6 @@ function(
 		}
 
 		return true;
-	};
-
-	IconTabHeader.prototype.onExit = function() {
-		// Deregister resize event before re-rendering
-		if (this._sResizeListenerNoFlexboxSupportId) {
-			ResizeHandler.deregister(this._sResizeListenerNoFlexboxSupportId);
-			this._sResizeListenerNoFlexboxSupportId = null;
-		}
 	};
 
 	/**

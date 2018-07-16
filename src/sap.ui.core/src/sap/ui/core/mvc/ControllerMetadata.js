@@ -3,8 +3,13 @@
  */
 
 // Provides ControllerMetadata
-sap.ui.define(['sap/ui/base/Metadata', 'sap/base/util/extend', 'sap/ui/core/mvc/OverrideExecution'],
-	function(Metadata, extend, OverrideExecution) {
+sap.ui.define([
+	'sap/ui/base/Metadata',
+	'sap/base/util/merge',
+	'sap/ui/core/mvc/OverrideExecution',
+	"sap/base/Log"
+],
+	function(Metadata, merge, OverrideExecution, Log) {
 	"use strict";
 
 	var ControllerMetadata = function(sClassName, oClassInfo) {
@@ -59,7 +64,7 @@ sap.ui.define(['sap/ui/base/Metadata', 'sap/base/util/extend', 'sap/ui/core/mvc/
 			* extend method metadata: make lifecycle hooks public
 			*/
 			if (bExtendsController && bDefinesMethods) {
-			    extend(oStaticInfo.methods, this._defaultLifecycleMethodMetadata);
+			    merge(oStaticInfo.methods, this._defaultLifecycleMethodMetadata);
 			}
 		}
 
@@ -74,7 +79,7 @@ sap.ui.define(['sap/ui/base/Metadata', 'sap/base/util/extend', 'sap/ui/core/mvc/
 				if (!n.match(rPrivateCheck)) {
 					//final check
 					if (bExtendsController && this._oParent && this._oParent.isMethodFinal(n)) {
-						jQuery.sap.log.error("Method: '" + n + "' of controller '" + this._oParent.getName() + "' is final and cannot be overridden by controller '" + this.getName() + "'");
+						Log.error("Method: '" + n + "' of controller '" + this._oParent.getName() + "' is final and cannot be overridden by controller '" + this.getName() + "'");
 						delete this._oClass.prototype[n];
 					}
 					// default metadata for methods
@@ -112,7 +117,7 @@ sap.ui.define(['sap/ui/base/Metadata', 'sap/base/util/extend', 'sap/ui/core/mvc/
 			if (this._mMethods[sMethod] && !bIsExtension) {
 			var bPublic = this._mMethods[sMethod].public;
 			//copy parent method definition as final/overrideExecution should not be overridden
-			this._mMethods[sMethod] = extend({}, mParentMethods[sMethod]);
+			this._mMethods[sMethod] = merge({}, mParentMethods[sMethod]);
 			if (bPublic !== undefined) {
 			this._mMethods[sMethod].public = bPublic;
 			}

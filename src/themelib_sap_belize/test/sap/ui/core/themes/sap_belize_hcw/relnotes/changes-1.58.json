@@ -37,6 +37,78 @@
         "type": "FIX",
         "text": " sap.ui.unified.Calendar: weekNumberSelect event now works correctly in IE and Edge",
         "references": []
+      },
+      {
+        "id": "827862284b5412c1404ffbbee11d5f0994ef518c",
+        "type": "FEATURE",
+        "text": " sap.m.ListBase: enable sticky header toolbars",
+        "references": []
+      },
+      {
+        "id": "9eed19dc624a04808bfe8e932124bf31501acb5f",
+        "type": "FIX",
+        "text": " Select: Double fours outline in sap_belize_hcw fixed",
+        "references": []
+      },
+      {
+        "id": "bdb7654d7e9b0205cb3ac151081d4871bf777a06",
+        "type": "FIX",
+        "text": " sap_belize: @sapPositiveColor contrast ratio fixed",
+        "references": []
+      },
+      {
+        "id": "c173db1214047804fe2807443b1be14909326419",
+        "type": "FIX",
+        "text": " sap.m.IconTabBar: headerBackgroundDesign now works correctly",
+        "references": []
+      },
+      {
+        "id": "e638f3c632e3e870c953d4397907f948c32f621d",
+        "type": "FIX",
+        "text": " sap.m.RatingIndicator: Focus outline fixed",
+        "references": []
+      },
+      {
+        "id": "b540bdef9cc96effb664ba3153f303d6ef0ec61a",
+        "type": "FIX",
+        "text": " MessageView: Link in hcb/hcw contrast fixed",
+        "references": []
+      },
+      {
+        "id": "d300575695f9845531deeba41cc05f12db411a95",
+        "type": "FIX",
+        "text": " sap.m.IconTabBar: DnD added tab background",
+        "references": []
+      },
+      {
+        "id": "44e9000fa60d010148f02fefdf71f34ef7b6007b",
+        "type": "FEATURE",
+        "text": " adding sap.ui.core.IconColor.Contrast",
+        "references": []
+      },
+      {
+        "id": "6b7e98c63c5db7e6218dd4e05bc71fbd10b0aa39",
+        "type": "FIX",
+        "text": " sap.m.SegmentedButton: visual fix of the color in active state on mobile",
+        "references": []
+      },
+      {
+        "id": "0f0514fcf72755574c43daed4857271f207d92b3",
+        "type": "FEATURE",
+        "text": " DynamicPage: backgroundDesign property added",
+        "references": []
+      },
+      {
+        "id": "d16a145c80ac1c93da7d78c32a386c4685326610",
+        "type": "FIX",
+        "text": " sap.m.RadioButton: Selection now visible in print",
+        "references": []
+      },
+      {
+        "id": "e7300c6187cb12b8e034e0cae7e04e1d4175b2ec",
+        "type": "FIX",
+        "text": "sap.m.themes.sap_belize_hcb.NewsContent: Accessibilty issue with focus of NewsContent in HCB and HCW theme.",
+        "references": []
       }
     ]
   }

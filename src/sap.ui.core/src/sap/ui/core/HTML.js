@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.ui.core.HTML.
-sap.ui.define(['jquery.sap.global', './Control', './RenderManager', "./HTMLRenderer"],
-	function(jQuery, Control, RenderManager, HTMLRenderer) {
+sap.ui.define(['./Control', './RenderManager', "./HTMLRenderer", "sap/base/Log"],
+	function(Control, RenderManager, HTMLRenderer, Log) {
 	"use strict";
 
 	// local shortcut
@@ -136,7 +136,7 @@ sap.ui.define(['jquery.sap.global', './Control', './RenderManager', "./HTMLRende
 	 */
 	HTML.prototype.getDomRef = function(sSuffix) {
 		var sId = sSuffix ? this.getId() + "-" + sSuffix : this.getId();
-		return jQuery.sap.domById(RenderPrefixes.Dummy + sId) || jQuery.sap.domById(sId);
+		return ((RenderPrefixes.Dummy + sId ? window.document.getElementById(RenderPrefixes.Dummy + sId) : null)) || ((sId ? window.document.getElementById(sId) : null));
 	};
 
 	HTML.prototype.setContent = function(sContent) {
@@ -162,7 +162,7 @@ sap.ui.define(['jquery.sap.global', './Control', './RenderManager', "./HTMLRende
 		}
 
 		if ( this.getSanitizeContent() ) {
-			jQuery.sap.log.trace("sanitizing HTML content for " + this);
+			Log.trace("sanitizing HTML content for " + this);
 			sContent = jQuery.sap._sanitizeHTML(sContent);
 		}
 
@@ -202,7 +202,7 @@ sap.ui.define(['jquery.sap.global', './Control', './RenderManager', "./HTMLRende
 			return;
 		}
 
-		var $placeholder = jQuery(jQuery.sap.domById(RenderPrefixes.Dummy + this.getId()));
+		var $placeholder = jQuery((RenderPrefixes.Dummy + this.getId() ? window.document.getElementById(RenderPrefixes.Dummy + this.getId()) : null));
 		var $oldContent = RenderManager.findPreservedContent(this.getId());
 		var $newContent;
 		var isPreservedDOM = false;
@@ -230,11 +230,11 @@ sap.ui.define(['jquery.sap.global', './Control', './RenderManager', "./HTMLRende
 	HTML.prototype._postprocessNewContent = function($newContent) {
 		if ( $newContent && $newContent.size() > 0 ) {
 			if ( $newContent.length > 1 ) {
-				jQuery.sap.log.warning("[Unsupported Feature]: " + this + " has rendered " + $newContent.length + " root nodes!");
+				Log.warning("[Unsupported Feature]: " + this + " has rendered " + $newContent.length + " root nodes!");
 			} else {
 				var sContentId = $newContent.attr("id");
 				if (sContentId && sContentId != this.getId()) {
-					jQuery.sap.log.warning("[Unsupported Feature]: Id of HTML Control '" + this.getId() + "' does not match with content id '" + sContentId + "'!");
+					Log.warning("[Unsupported Feature]: Id of HTML Control '" + this.getId() + "' does not match with content id '" + sContentId + "'!");
 				}
 			}
 
@@ -245,7 +245,7 @@ sap.ui.define(['jquery.sap.global', './Control', './RenderManager', "./HTMLRende
 				$newContent.filter(":not([id])").first().attr("id", this.getId());
 			}
 		} else {
-			jQuery.sap.log.debug("" + this + " is empty after rendering, setting bOutput to false");
+			Log.debug("" + this + " is empty after rendering, setting bOutput to false");
 			this.bOutput = false; // clean up internal rendering bookkeeping
 		}
 	};
@@ -275,13 +275,13 @@ sap.ui.define(['jquery.sap.global', './Control', './RenderManager', "./HTMLRende
 	};
 
 	HTML.prototype.setTooltip = function() {
-		jQuery.sap.log.warning("The sap.ui.core.HTML control doesn't support tooltips. Add the tooltip to the HTML content instead.");
+		Log.warning("The sap.ui.core.HTML control doesn't support tooltips. Add the tooltip to the HTML content instead.");
 		return Control.prototype.setTooltip.apply(this, arguments);
 	};
 
 	"hasStyleClass addStyleClass removeStyleClass toggleStyleClass".split(" ").forEach(function(method) {
 		HTML.prototype[method] = function() {
-			jQuery.sap.log.warning("The sap.ui.core.HTML control doesn't support custom style classes. Manage custom CSS classes in the HTML content instead.");
+			Log.warning("The sap.ui.core.HTML control doesn't support custom style classes. Manage custom CSS classes in the HTML content instead.");
 			return Control.prototype[method].apply(this, arguments);
 		};
 	});

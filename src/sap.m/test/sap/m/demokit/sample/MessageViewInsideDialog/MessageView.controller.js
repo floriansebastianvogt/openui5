@@ -9,6 +9,7 @@ sap.ui.define([
 	return Controller.extend("sap.m.sample.MessageViewInsideDialog.MessageView", {
 
 		onInit: function () {
+			var that = this;
 
 			var	oLink = new sap.m.Link({
 				text: "Show more information",
@@ -61,30 +62,33 @@ sap.ui.define([
 
 			oModel.setData(aMockMessages);
 
-			var oMessageView = new sap.m.MessageView({
-					showDetailsPageHeader: false,
-					itemSelect: function () {
-						oBackButton.setVisible(true);
-					},
-					items: {
-						path: "/",
-						template: oMessageTemplate
-					}
-				}),
-				oBackButton = new sap.m.Button({
+			this.oMessageView = new sap.m.MessageView({
+				showDetailsPageHeader: false,
+				itemSelect: function () {
+					oBackButton.setVisible(true);
+				},
+				items: {
+					path: "/",
+					template: oMessageTemplate
+				}
+			});
+
+			var oBackButton = new sap.m.Button({
 					icon: sap.ui.core.IconPool.getIconURI("nav-back"),
 					visible: false,
 					press: function () {
-						oMessageView.navigateBack();
+						that.oMessageView.navigateBack();
 						this.setVisible(false);
 					}
 				});
 
-			oMessageView.setModel(oModel);
+
+
+			this.oMessageView.setModel(oModel);
 
 			this.oDialog = new sap.m.Dialog({
 				resizable: true,
-				content: oMessageView,
+				content: this.oMessageView,
 				state: 'Error',
 				beginButton: new sap.m.Button({
 					press: function () {
@@ -105,6 +109,7 @@ sap.ui.define([
 		},
 
 		handleDialogPress: function (oEvent) {
+			this.oMessageView.navigateBack();
 			this.oDialog.open();
 		}
 

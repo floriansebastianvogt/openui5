@@ -5,10 +5,12 @@
 sap.ui.define([
 	"./library",
 	"sap/ui/core/Control",
-	"jquery.sap.global",
-	"./WizardStepRenderer"
+	"./WizardStepRenderer",
+	"./Button",
+	"./TitlePropagationSupport",
+	"sap/base/Log"
 ],
-	function(library, Control, jQuery, WizardStepRenderer) {
+	function(library, Control, WizardStepRenderer, Button, TitlePropagationSupport, Log) {
 
 	"use strict";
 
@@ -87,7 +89,12 @@ sap.ui.define([
 				/**
 				 * The content of the Wizard Step.
 				 */
-				content: {type: "sap.ui.core.Control", multiple: true, singularName: "content"}
+				content: {type: "sap.ui.core.Control", multiple: true, singularName: "content"},
+				/**
+				 * The next button of the Wizard Step.
+				 * @since 1.58
+				 */
+				_nextButton: { type: "sap.m.Button", multiple: false, visibility: "hidden"}
 			},
 			associations: {
 				/**
@@ -106,6 +113,54 @@ sap.ui.define([
 			}
 		}
 	});
+
+	// Add title propagation support
+	TitlePropagationSupport.call(WizardStep.prototype, "content", function () {return this.getId() + "-title";});
+
+	WizardStep.prototype.init = function () {
+		this._resourceBundle = sap.ui.getCore().getLibraryResourceBundle("sap.m");
+		this._oNextButton = new Button({
+			text: this._resourceBundle.getText("WIZARD_STEP") + 2,
+			type: "Emphasized",
+			enabled: this.getValidated(),
+			press: this._handleNextButtonPress.bind(this)
+		}).addStyleClass("sapMWizardNextButton");
+
+		this._oNextButton.addEventDelegate({
+			onAfterRendering: function () {
+				setTimeout(function () {
+					var oButton = this._oNextButton,
+						oButtonDomRef = oButton.getDomRef();
+
+					if (oButton.getEnabled()) {
+						oButton.addStyleClass("sapMWizardNextButtonVisible");
+						oButtonDomRef && oButtonDomRef.removeAttribute("aria-hidden");
+					} else {
+						oButton.removeStyleClass("sapMWizardNextButtonVisible");
+						// aria-hidden attribute is used instead of setVisible(false)
+						// in order to preserve the current animation implementation
+						oButtonDomRef && oButtonDomRef.setAttribute("aria-hidden", true);
+					}
+				}.bind(this), 0);
+			}
+		}, this);
+
+		this.setAggregation("_nextButton", this._oNextButton);
+
+		this._initTitlePropagationSupport();
+	};
+
+	/**
+	 * Called before the control is rendered.
+	 *
+	 * @private
+	 */
+	WizardStep.prototype.onBeforeRendering = function () {
+		var bVisible = this._getWizardParent() ? this._getWizardParent().getShowNextButton() : true;
+		this._oNextButton.setProperty("visible", bVisible, true);
+	};
+
+	WizardStep.prototype._handleNextButtonPress = function () {};
 
 	WizardStep.prototype.setValidated = function (validated) {
 		this.setProperty("validated", validated, true);
@@ -144,7 +199,7 @@ sap.ui.define([
 	 */
 	WizardStep.prototype.setVisible = function (visible) {
 		this.setProperty("visible", visible, true);
-		jQuery.sap.log.warning("Don't use the set visible method for wizard steps. If you need to show/hide steps based on some condition - use the branching property of the Wizard instead.");
+		Log.warning("Don't use the set visible method for wizard steps. If you need to show/hide steps based on some condition - use the branching property of the Wizard instead.");
 		return this;
 	};
 

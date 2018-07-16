@@ -4,21 +4,21 @@
 
 // Provides base class for controllers (part of MVC concept)
 sap.ui.define([
-	'jquery.sap.global',
-	'sap/base/util/extend',
+	'sap/base/util/ObjectPath',
 	'sap/ui/base/EventProvider',
 	'sap/ui/base/ManagedObject',
 	'sap/ui/core/mvc/ControllerMetadata',
 	'sap/ui/core/mvc/ControllerExtension',
-	'sap/ui/core/mvc/OverrideExecution'
+	'sap/ui/core/mvc/OverrideExecution',
+	"sap/base/Log"
 	], function(
-		jQuery,
-		extend,
+		ObjectPath,
 		EventProvider,
 		ManagedObject,
 		ControllerMetadata,
 		ControllerExtension,
-		OverrideExecution
+		OverrideExecution,
+		Log
 	) {
 	"use strict";
 
@@ -57,7 +57,7 @@ sap.ui.define([
 				var oToExtend = null;
 				if (typeof (sName) == "string") {
 					if (!mRegistry[sName]) {
-						jQuery.sap.log.warning("Do not call sap.ui.core.mvc.Controller constructor for non typed scenario!");
+						Log.warning("Do not call sap.ui.core.mvc.Controller constructor for non typed scenario!");
 					}
 					oToExtend = mRegistry[sName];
 				}
@@ -103,7 +103,9 @@ sap.ui.define([
 						}.bind(this);
 					}
 				}.bind(this));
-				this.getInterface = jQuery.sap.getter(mMethods);
+				this.getInterface = function() {
+					return mMethods;
+				};
 				return mMethods;
 			}
 		}, ControllerMetadata);
@@ -144,7 +146,7 @@ sap.ui.define([
 					if (!oOrigExtensionMetadata.isMethodFinal(sOverrideMember)) {
 						ControllerExtension.overrideMethod(sOverrideMember, oExtension, oStaticOverrides, oExtension, oOrigExtensionMetadata.getOverrideExecution(sOverrideMember));
 					}  else {
-						jQuery.sap.log.error("Method '" + sOverrideMember + "' of extension '" + sNamespace + "' is flagged final and cannot be overridden by calling 'override'");
+						Log.error("Method '" + sOverrideMember + "' of extension '" + sNamespace + "' is flagged final and cannot be overridden by calling 'override'");
 					}
 				}
 				//handle 'normal' overrides
@@ -152,7 +154,7 @@ sap.ui.define([
 					if (sOverrideMember !== 'extension') {
 						//handle overrides on controller and member extensions
 						if (sOverrideMember in oExtension.base) {
-							jQuery.sap.log.debug("Overriding  member '" + sOverrideMember + "' of original controller.");
+							Log.debug("Overriding  member '" + sOverrideMember + "' of original controller.");
 							var vMember = oOverrides[sOverrideMember];
 							var fnOriginal = oController[sOverrideMember];
 							//check for member extension
@@ -163,19 +165,19 @@ sap.ui.define([
 									if (!oOrigExtensionMetadata.isMethodFinal(sExtensionOverride)) {
 										ControllerExtension.overrideMethod(sExtensionOverride, fnOriginal, vMember, oExtension, oOrigExtensionMetadata.getOverrideExecution(sExtensionOverride));
 									}  else {
-										jQuery.sap.log.error("Method '" + sExtensionOverride + "' of extension '" + oOrigExtensionInfo.namespace + "' is flagged final and cannot be overridden by extension '" + sNamespace + "'");
+										Log.error("Method '" + sExtensionOverride + "' of extension '" + oOrigExtensionInfo.namespace + "' is flagged final and cannot be overridden by extension '" + sNamespace + "'");
 									}
 								}
 							} else if (!oControllerMetadata.isMethodFinal(sOverrideMember)) {
 								ControllerExtension.overrideMethod(sOverrideMember, oController, oOverrides, oExtension, oControllerMetadata.getOverrideExecution(sOverrideMember));
 							} else {
-								jQuery.sap.log.error("Method '" + sOverrideMember + "' of controller '" + oController.getMetadata().getName() + "' is flagged final and cannot be overridden by extension '" + sNamespace + "'");
+								Log.error("Method '" + sOverrideMember + "' of controller '" + oController.getMetadata().getName() + "' is flagged final and cannot be overridden by extension '" + sNamespace + "'");
 							}
 						} else if (sOverrideMember in mLifecycleConfig) {
 							//apply lifecycle hooks even if they don't exist on controller
 							ControllerExtension.overrideMethod(sOverrideMember, oController, oOverrides, oExtension, oControllerMetadata.getOverrideExecution(sOverrideMember));
 						} else {
-							jQuery.sap.log.error("Method '" + sExtensionOverride + "' of extension '" + oOrigExtensionInfo.namespace + " does not exist in controller " + oController.getMetadata().getName() + " and cannot be overridden");
+							Log.error("Method '" + sExtensionOverride + "' of extension '" + oOrigExtensionInfo.namespace + " does not exist in controller " + oController.getMetadata().getName() + " and cannot be overridden");
 						}
 					}
 					//handle non member extension overrides
@@ -183,7 +185,7 @@ sap.ui.define([
 						//allow to override methods of other controller extensions
 						for (var sExtensionNamespace in oOverrides.extension) {
 							oOrigExtensionMetadata = oExtensions[sExtensionNamespace].extension.getMetadata();
-							var oOrigExtensionInterface = jQuery.sap.getObject(sExtensionNamespace, null, oController.extension);
+							var oOrigExtensionInterface = ObjectPath.create(sExtensionNamespace, oController.extension);
 							var oOrigExtension = oExtensions[sExtensionNamespace].extension;
 							var oExtensionOverrides = oOverrides.extension[sExtensionNamespace];
 							for (sExtensionOverride in oExtensionOverrides) {
@@ -193,7 +195,7 @@ sap.ui.define([
 									//override Extension so 'this' is working for overrides
 									ControllerExtension.overrideMethod(sExtensionOverride, oOrigExtension, oExtensionOverrides, oExtension, oOrigExtensionMetadata.getOverrideExecution(sExtensionOverride));
 								} else {
-									jQuery.sap.log.error("Method '" + sExtensionOverride + "' of extension '" + sExtensionNamespace + "' is flagged final and cannot be overridden by extension '" + sNamespace + "'");
+									Log.error("Method '" + sExtensionOverride + "' of extension '" + sExtensionNamespace + "' is flagged final and cannot be overridden by extension '" + sNamespace + "'");
 								}
 							}
 						}
@@ -212,8 +214,8 @@ sap.ui.define([
 			} else {
 				oExtensions[sNamespace] = oExtensionInfo;
 				oExtensionInfo.location = "extension." + sNamespace;
-				jQuery.sap.setObject("extension." + sNamespace, oExtensionInterface, oController);
-				jQuery.sap.setObject("extension." + sNamespace, oExtensionInterface, oInterface);
+				ObjectPath.set("extension." + sNamespace, oExtensionInterface, oController);
+				ObjectPath.set("extension." + sNamespace, oExtensionInterface, oInterface);
 			}
 		}
 
@@ -266,7 +268,7 @@ sap.ui.define([
 					return Controller;
 				} else {
 					//legacy controller
-					return jQuery.sap.getObject(sName);
+					return ObjectPath.get(sName);
 				}
 			}
 
@@ -409,7 +411,7 @@ sap.ui.define([
 							return oController;
 						}
 					}, function(err) {
-						jQuery.sap.log.error("Attempt to load Extension Controller " + sCustomControllerName + " was not successful - is the Controller correctly defined in its file?");
+						Log.error("Attempt to load Extension Controller " + sCustomControllerName + " was not successful - is the Controller correctly defined in its file?");
 					});
 			}
 
@@ -434,7 +436,7 @@ sap.ui.define([
 
 				// avoid null values for controllers to be handled here!
 				if (typeof sControllerName === "string") {
-					jQuery.sap.log.info("Customizing: Controller '" + sName + "' is now extended by '" + sControllerName + "'");
+					Log.info("Customizing: Controller '" + sName + "' is now extended by '" + sControllerName + "'");
 
 					if (bAsync) {
 						//chain controllers as the order of processing is relevant
@@ -447,7 +449,7 @@ sap.ui.define([
 						if ((oCustomControllerDef = mRegistry[sControllerName]) !== undefined) { //variable init, not comparison!
 							mixinControllerDefinition(oController, oCustomControllerDef);
 						} else {
-							jQuery.sap.log.error("Attempt to load Extension Controller " + sControllerName + " was not successful - is the Controller correctly defined in its file?");
+							Log.error("Attempt to load Extension Controller " + sControllerName + " was not successful - is the Controller correctly defined in its file?");
 						}
 					}
 				}
@@ -470,7 +472,7 @@ sap.ui.define([
 			if (!Controller._sExtensionProvider) {
 				return bAsync ? Promise.resolve(oController) : oController;
 			}
-			jQuery.sap.log.info("Customizing: Controller '" + sName + "' is now extended by Controller Extension Provider '" + Controller._sExtensionProvider + "'");
+			Log.info("Customizing: Controller '" + sName + "' is now extended by Controller Extension Provider '" + Controller._sExtensionProvider + "'");
 
 			var oExtensions,
 				oExtensionProvider;
@@ -488,7 +490,7 @@ sap.ui.define([
 						}
 						return oController;
 					}, function(err){
-						jQuery.sap.log.error("Controller Extension Provider: Error '" + err + "' thrown in " + Controller._sExtensionProvider + "extension provider ignored.");
+						Log.error("Controller Extension Provider: Error '" + err + "' thrown in " + Controller._sExtensionProvider + "extension provider ignored.");
 						return oController;
 					});
 			} else  {
@@ -500,7 +502,7 @@ sap.ui.define([
 						mixinControllerDefinition(oController, oExtensions[i]);
 					}
 				} else {
-					jQuery.sap.log.error("Controller Extension Provider: Error in ExtensionProvider.getControllerExtensions: " + Controller._sExtensionProvider + " - no valid extensions returned");
+					Log.error("Controller Extension Provider: Error in ExtensionProvider.getControllerExtensions: " + Controller._sExtensionProvider + " - no valid extensions returned");
 				}
 			}
 
@@ -539,18 +541,14 @@ sap.ui.define([
 		 * @return {void | sap.ui.core.mvc.Controller | Promise} void, the new controller instance or a Promise
 		 * 	resolving with the controller in async case
 		 * @static
-		 * @deprecated since 1.56:
-		 * <ul>
-		 * <li>For controller instance creation use <code>Controller.create</code> instead.</li>
-		 * <li>For defining controllers use <code>Controller.extend</code> instead.
-		 * </ul>
+		 * @deprecated Since 1.56, use {@link #.create Controller.create} or {@link #.extend Controller.extend} instead.
 		 * @public
 		 */
 		sap.ui.controller = function (sName, oControllerImpl, bAsync) {
 			if (bAsync) {
-				jQuery.sap.log.info("Do not use deprecated factory function 'sap.ui.controller(" + sName + ")'. Use 'sap.ui.core.mvc.Controller.create(...)' instead.");
+				Log.info("Do not use deprecated factory function 'sap.ui.controller(" + sName + ")'. Use 'sap.ui.core.mvc.Controller.create(...)' instead.");
 			} else {
-				jQuery.sap.log.warning("Do not use synchronous controller creation for controller '" + sName + "'! Use the new asynchronous factory 'sap.ui.core.mvc.Controller.create(...)' instead.");
+				Log.warning("Do not use synchronous controller creation for controller '" + sName + "'! Use the new asynchronous factory 'sap.ui.core.mvc.Controller.create(...)' instead.");
 			}
 			return controllerFactory.apply(this, arguments);
 		};
@@ -595,7 +593,7 @@ sap.ui.define([
 			} else {
 				// controller *definition*
 				mRegistry[sName] = oControllerImpl;
-				jQuery.sap.log.info("For defining controllers use Controller.extend instead");
+				Log.info("For defining controllers use Controller.extend instead");
 			}
 		}
 
@@ -642,7 +640,7 @@ sap.ui.define([
 		 */
 		Controller.prototype.destroy = function() {
 			Object.keys(this["_sapui_Extensions"]).forEach(function(oExtensionInfo) {
-				jQuery.sap.setObject(oExtensionInfo.location, null, this);
+				ObjectPath.set(oExtensionInfo.location, null, this);
 			}.bind(this));
 			delete this["_sapui_Extensions"];
 			delete this["_sapui_Interface"];

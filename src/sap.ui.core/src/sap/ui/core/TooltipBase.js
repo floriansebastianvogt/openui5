@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.ui.core.TooltipBase.
-sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery.sap.keycodes'],
-	function(jQuery, Control, Popup, library /*, jQuerySapKeycodes */) {
+sap.ui.define(['./Control', './Popup', './library', "sap/ui/events/KeyCodes"],
+	function(Control, Popup, library, KeyCodes) {
 	"use strict";
 
 
@@ -96,12 +96,14 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 	 * @return The popup to use
 	 * @private
 	 */
-	TooltipBase.prototype._getPopup = jQuery.sap.getter((function() {
-			var oPopup = new Popup();
-				oPopup.setShadow(true);
-				return oPopup;
-			}())
-	);
+	TooltipBase.prototype._getPopup = function() {
+		var oPopup = new Popup();
+		oPopup.setShadow(true);
+		TooltipBase.prototype._getPopup = function() {
+			return oPopup;
+		};
+		return oPopup;
+	};
 
 	/**
 	 * When a control that has a Tooltip gets the focus, this method is called.
@@ -163,12 +165,12 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 			}
 		}
 		if (TooltipBase.sOpenTimeout) {
-			jQuery.sap.clearDelayedCall(TooltipBase.sOpenTimeout);
+			clearTimeout(TooltipBase.sOpenTimeout);
 			TooltipBase.sOpenTimeout = undefined;
 		}
 
 		// Avoid closing the popup when there is a move inside the control to another control or element (for example div)
-		this.sCloseNowTimeout = jQuery.sap.delayedCall(this.getCloseDelay(), this, "closePopup");
+		this.sCloseNowTimeout = setTimeout(this["closePopup"].bind(this), this.getCloseDelay());
 	};
 
 	/**
@@ -201,7 +203,7 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 			// Since the focus goes into the tooltip which means the tooltip is already open,
 			// we don't need to execute the opening logic and simply return.
 			if (this.sCloseNowTimeout) {
-				jQuery.sap.clearDelayedCall(this.sCloseNowTimeout);
+				clearTimeout(this.sCloseNowTimeout);
 				this.sCloseNowTimeout = null;
 			}
 			oEvent.stopPropagation();
@@ -214,7 +216,7 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 			// doesn't have a tooltip set, it means that there's no new control between the oEvent.target and
 			// oEvent.currentTarget and the mouse moves within the same control, the close should be cancelled.
 			if (this.sCloseNowTimeout) {
-				jQuery.sap.clearDelayedCall(this.sCloseNowTimeout);
+				clearTimeout(this.sCloseNowTimeout);
 				this.sCloseNowTimeout = null;
 				oEvent.stopPropagation();
 				oEvent.preventDefault();
@@ -229,7 +231,7 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 					var oLeftElementTooltip = oLeftElement.getTooltip();
 					if ( !this.isStandardTooltip(oLeftElementTooltip) && (!oLeftElementTooltip || !(oLeftElementTooltip instanceof TooltipBase))) {
 						if (this.sCloseNowTimeout) {
-							jQuery.sap.clearDelayedCall(this.sCloseNowTimeout);
+							clearTimeout(this.sCloseNowTimeout);
 							this.sCloseNowTimeout = null;
 							oEvent.stopPropagation();
 							oEvent.preventDefault();
@@ -245,9 +247,9 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 			this.removeStandardTooltips();
 			// Open with delay 0,5 sec.
 			if (TooltipBase.sOpenTimeout) {
-				jQuery.sap.clearDelayedCall(TooltipBase.sOpenTimeout);
+				clearTimeout(TooltipBase.sOpenTimeout);
 			}
-			TooltipBase.sOpenTimeout = jQuery.sap.delayedCall(this.getOpenDelay(), this, "openPopup", [this._currentControl]);
+			TooltipBase.sOpenTimeout = setTimeout(this["openPopup"].bind(this, this._currentControl), this.getOpenDelay());
 			// We need this for the scenario if the both a child and his parent have a RichTooltip
 			oEvent.stopPropagation();
 			oEvent.preventDefault();
@@ -263,12 +265,12 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 	TooltipBase.prototype.onmouseout = function(oEvent) {
 		//jQuery.sap.log.debug("MOUSE OUT    " + jQuery(oEvent.target).control(0) + "   "+ jQuery(oEvent.currentTarget).control(0) );
 		if (TooltipBase.sOpenTimeout) {
-			jQuery.sap.clearDelayedCall(TooltipBase.sOpenTimeout);
+			clearTimeout(TooltipBase.sOpenTimeout);
 			TooltipBase.sOpenTimeout = undefined;
 		}
 		// Avoid closing the popup when there is a move inside the control to another control or element (for example div)
 		if (!this.sCloseNowTimeout) {
-			this.sCloseNowTimeout = jQuery.sap.delayedCall(this.getCloseDelay(), this, "closePopup");
+			this.sCloseNowTimeout = setTimeout(this["closePopup"].bind(this), this.getCloseDelay());
 		}
 		this.restoreStandardTooltips();
 		oEvent.stopPropagation();
@@ -285,7 +287,7 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 		var oPopup = this._getPopup();
 
 		if (this.sCloseNowTimeout) {
-			jQuery.sap.clearDelayedCall(this.sCloseNowTimeout);
+			clearTimeout(this.sCloseNowTimeout);
 		}
 		this.sCloseNowTimeout = undefined;
 
@@ -316,7 +318,7 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 
 			// Clear Delayed Call if exist
 			if (this.sCloseNowTimeout) {
-				jQuery.sap.clearDelayedCall(this.sCloseNowTimeout);
+				clearTimeout(this.sCloseNowTimeout);
 				this.sCloseNowTimeout = null;
 				return;
 			}
@@ -430,7 +432,7 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 	 */
 	TooltipBase.prototype.onkeydown = function(oEvent) {
 		// Ctrl is pressed together with "i" - Open Rich tooltip.
-		if (oEvent.ctrlKey && oEvent.which == jQuery.sap.KeyCodes.I) {
+		if (oEvent.ctrlKey && oEvent.which == KeyCodes.I) {
 			// The Element or Control that initiated the event.
 
 			var oEventSource = jQuery(oEvent.target).control(0);
@@ -448,11 +450,11 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 					oEvent.stopPropagation();
 				}
 			}
-		} else if (oEvent.which == jQuery.sap.KeyCodes.ESCAPE) {
+		} else if (oEvent.which == KeyCodes.ESCAPE) {
 			// If ESC is pressed then close the Rich Tooltip.
 
 			if (TooltipBase.sOpenTimeout) {
-				jQuery.sap.clearDelayedCall(TooltipBase.sOpenTimeout);
+				clearTimeout(TooltipBase.sOpenTimeout);
 				TooltipBase.sOpenTimeout = undefined;
 			}
 
@@ -478,7 +480,7 @@ sap.ui.define(['jquery.sap.global', './Control', './Popup', './library', 'jquery
 		if (oPopup.isOpen()) {
 			this.closePopup();
 		} else if (TooltipBase.sOpenTimeout) {
-			jQuery.sap.clearDelayedCall(TooltipBase.sOpenTimeout);
+			clearTimeout(TooltipBase.sOpenTimeout);
 			TooltipBase.sOpenTimeout = undefined;
 		}
 	};

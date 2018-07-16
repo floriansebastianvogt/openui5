@@ -1,5 +1,6 @@
+var sBaseUrl = "/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/";
 var xhr = sinon.useFakeXMLHttpRequest(),
-	baseURL = "../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/",
+	baseURL = sBaseUrl,
 	responseDelay = 10,
 	_setTimeout = window.setTimeout,
 	csrfToken,
@@ -23,7 +24,7 @@ function updateSessionContextId() {
 }
 
 function resetBaseUrl() {
-  baseURL = "../../../../../proxy/http/services.odata.org/V3/Northwind/Northwind.svc/";
+  baseURL = "/proxy/http/services.odata.org/V3/Northwind/Northwind.svc/";
 }
 
 function setBaseUrl(newBaseUrl) {
@@ -76,12 +77,18 @@ xhr.onCreate = function(request) {
 				[200, oMetaDataHeaders, sMetadataComplex],
 			"$metadata?sap-language=en&test2=xx":
 				[200, oMetaDataHeaders, sMetaData],
-			"Categories/$count":
+			"Products?$skip=0&$top=100&Error500":
+				[500, oXMLErrorHeaders, sError],
+      "Products?Error500&$skip=0&$top=100":
+				[500, oXMLErrorHeaders, sError],
+		  "Categories/$count":
 				[200, oCountHeaders, "8"],
 			"Regions":
 				[200, oXMLHeaders, sRegionsXML],
 			"Products(2)":
 				[200, oXMLHeaders, sProducts2XML],
+      "Products(2)?Error500":
+				[500, oXMLErrorHeaders, sError],
 			"Products(3)":
 				[200, oXMLHeaders, sProducts3XML],
 			"Products(3)?$select=ProductName":
@@ -174,11 +181,11 @@ xhr.onCreate = function(request) {
 				[200, oXMLHeaders, sCategoriesXML],
 			"Categories?$skip=0&$top=100&$filter=CategoryName%20eq%20%27Beverages%27":
 				[200, oXMLHeaders, sCategoriesFilter1XML],
-			"Categories/$count?$filter=(CategoryName%20eq%20%27Condiments%27%20or%20substringof(%27ons%27,CategoryName))":
+			"Categories/$count?$filter=CategoryName%20eq%20%27Condiments%27%20or%20substringof(%27ons%27,CategoryName)":
 				[200, oCountHeaders, "2"],
-			"Categories?$skip=0&$top=2&$filter=(CategoryName%20eq%20%27Condiments%27%20or%20substringof(%27ons%27,CategoryName))":
+			"Categories?$skip=0&$top=2&$filter=CategoryName%20eq%20%27Condiments%27%20or%20substringof(%27ons%27,CategoryName)":
 				[200, oXMLHeaders, sCategoriesFilter2XML],
-			"Categories?$skip=0&$top=100&$filter=(CategoryName%20eq%20%27Condiments%27%20or%20substringof(%27ons%27,CategoryName))":
+			"Categories?$skip=0&$top=100&$filter=CategoryName%20eq%20%27Condiments%27%20or%20substringof(%27ons%27,CategoryName)":
 				[200, oXMLHeaders, sCategoriesFilter2XML],
 			"Categories/$count?$filter=(CategoryName%20ge%20%27Beverages%27%20and%20CategoryName%20le%20%27D%27)":
 				[200, oCountHeaders, "3"],
@@ -196,17 +203,17 @@ xhr.onCreate = function(request) {
 				[200, oXMLHeaders, sCategoriesFilter4XML],
 			"Categories?$skip=0&$top=100&$filter=startswith(CategoryName,%27C%27)%20and%20endswith(Description,%27ngs%27)":
 				[200, oXMLHeaders, sCategoriesFilter4XML],
-			"Categories/$count?$filter=(CategoryName%20le%20%27Z%27%20and%20CategoryName%20ge%20%27A%27%20and%20CategoryName%20ne%20%27Beverages%27)":
+			"Categories/$count?$filter=CategoryName%20le%20%27Z%27%20and%20CategoryName%20ge%20%27A%27%20and%20CategoryName%20ne%20%27Beverages%27":
 				[200, oCountHeaders, "7"],
-			"Categories?$skip=0&$top=7&$filter=(CategoryName%20le%20%27Z%27%20and%20CategoryName%20ge%20%27A%27%20and%20CategoryName%20ne%20%27Beverages%27)":
+			"Categories?$skip=0&$top=7&$filter=CategoryName%20le%20%27Z%27%20and%20CategoryName%20ge%20%27A%27%20and%20CategoryName%20ne%20%27Beverages%27":
 				[200, oXMLHeaders, sCategoriesFilter5XML],
-			"Categories?$skip=0&$top=100&$filter=(CategoryName%20le%20%27Z%27%20and%20CategoryName%20ge%20%27A%27%20and%20CategoryName%20ne%20%27Beverages%27)":
+			"Categories?$skip=0&$top=100&$filter=CategoryName%20le%20%27Z%27%20and%20CategoryName%20ge%20%27A%27%20and%20CategoryName%20ne%20%27Beverages%27":
 				[200, oXMLHeaders, sCategoriesFilter5XML],
-			"Categories/$count?$filter=(CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27)":
+			"Categories/$count?$filter=CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27":
 				[200, oCountHeaders, "2"],
-			"Categories?$skip=0&$top=2&$filter=(CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27)":
+			"Categories?$skip=0&$top=2&$filter=CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27":
 				[200, oXMLHeaders, sCategoriesFilter6XML],
-			"Categories?$skip=0&$top=100&$filter=(CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27)":
+			"Categories?$skip=0&$top=100&$filter=CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27":
 				[200, oXMLHeaders, sCategoriesFilter6XML],
 			"Categories/$count?$filter=(CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27)%20and%20endswith(Description,%27ings%27)":
 				[200, oCountHeaders, "1"],
@@ -214,11 +221,11 @@ xhr.onCreate = function(request) {
 				[200, oXMLHeaders, sCategoriesFilter7XML],
 			"Categories?$skip=0&$top=100&$filter=(CategoryName%20eq%20%27Condiments%27%20or%20CategoryName%20eq%20%27Beverages%27)%20and%20endswith(Description,%27ings%27)":
 				[200, oXMLHeaders, sCategoriesFilter7XML],
-			"Categories/$count?$filter=(((CategoryName%20eq%20%27Beverages%27%20or%20CategoryName%20eq%20%27Dairy%20Products%27%20or%20CategoryName%20eq%20%27Grains%2fCereals%27)%20or%20CategoryID%20eq%203)%20and%20endswith(Description,%27s%27))":
+			"Categories/$count?$filter=((CategoryName%20eq%20%27Beverages%27%20or%20CategoryName%20eq%20%27Dairy%20Products%27%20or%20CategoryName%20eq%20%27Grains%2fCereals%27)%20or%20CategoryID%20eq%203)%20and%20endswith(Description,%27s%27)":
 				[200, oCountHeaders, "3"],
-			"Categories?$skip=0&$top=3&$filter=(((CategoryName%20eq%20%27Beverages%27%20or%20CategoryName%20eq%20%27Dairy%20Products%27%20or%20CategoryName%20eq%20%27Grains%2fCereals%27)%20or%20CategoryID%20eq%203)%20and%20endswith(Description,%27s%27))":
+			"Categories?$skip=0&$top=3&$filter=((CategoryName%20eq%20%27Beverages%27%20or%20CategoryName%20eq%20%27Dairy%20Products%27%20or%20CategoryName%20eq%20%27Grains%2fCereals%27)%20or%20CategoryID%20eq%203)%20and%20endswith(Description,%27s%27)":
 				[200, oXMLHeaders, sCategoriesFilter8XML],
-			"Categories?$skip=0&$top=100&$filter=(((CategoryName%20eq%20%27Beverages%27%20or%20CategoryName%20eq%20%27Dairy%20Products%27%20or%20CategoryName%20eq%20%27Grains%2fCereals%27)%20or%20CategoryID%20eq%203)%20and%20endswith(Description,%27s%27))":
+			"Categories?$skip=0&$top=100&$filter=((CategoryName%20eq%20%27Beverages%27%20or%20CategoryName%20eq%20%27Dairy%20Products%27%20or%20CategoryName%20eq%20%27Grains%2fCereals%27)%20or%20CategoryID%20eq%203)%20and%20endswith(Description,%27s%27)":
 				[200, oXMLHeaders, sCategoriesFilter8XML],
 			"Categories(7)/Products?$skip=0&$top=5":
 				[200, oXMLHeaders, sProductsXML],
@@ -302,13 +309,13 @@ xhr.onCreate = function(request) {
 				[200, oCountHeaders, "9"],
 			"Products?$skip=0&$top=9&$filter=startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m":
 				[200, oXMLHeaders, sProductsForFilterANDing1],
-			"Products/$count?$filter=(substringof(%27o%27,ProductName))%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
+			"Products/$count?$filter=substringof(%27o%27,ProductName)%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
 				[200, oCountHeaders, "5"],
-			"Products?$skip=0&$top=5&$filter=(substringof(%27o%27,ProductName))%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
+			"Products?$skip=0&$top=5&$filter=substringof(%27o%27,ProductName)%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
 				[200, oXMLHeaders, sProductsForFilterANDing2],
-			"Products/$count?$filter=(UnitPrice%20le%2030.000m)%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
+			"Products/$count?$filter=UnitPrice%20le%2030.000m%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
 				[200, oCountHeaders, "6"],
-			"Products?$skip=0&$top=6&$filter=(UnitPrice%20le%2030.000m)%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
+			"Products?$skip=0&$top=6&$filter=UnitPrice%20le%2030.000m%20and%20(startswith(ProductName,%27C%27)%20and%20UnitPrice%20ge%2010.000m)":
 				[200, oXMLHeaders, sProductsForFilterANDing3],
 					"Regions?$skip=0&$top=100&$expand=Territories&$inlinecount=allpages":
 				[200, oJSONHeaders, sRegionsJSON],
@@ -332,8 +339,8 @@ xhr.onCreate = function(request) {
 		"POST":{
 			//create Entry
 			"Products?Fail500=true":
-				[500, oJSONHeaders, ""],
-			"Products?Fail500=false":
+				[500, oJSONHeaders, ''],
+      "Products?Fail500=false":
 				[201, oJSONHeaders, sProduct2JSON],
 			"$batch":
 				[202, oJSONHeaders, sProduct2JSON],
@@ -630,6 +637,10 @@ var oXMLHeaders = 	{
 		"Invalid": "invalid"
 	};
 
+var oXMLErrorHeaders = 	{
+		"Content-Type": "application/xml;charset=utf-8"
+};
+
 var oJSONHeaders = 	{
 		"Content-Type": "application/json;charset=utf-8",
 		"DataServiceVersion": "2.0"
@@ -666,6 +677,11 @@ var oSpecialHeaders = {
 	"X-CuStOm-HeAdEr": "case-sensitive"
 };
 var sSAMLLoginPage = '<html><body><h1>SAML Login Page</h1></body></html>';
+
+var sError = '\<?xml version="1.0" encoding="utf-8" standalone="yes"?>\
+  <error>\
+    <message xml:lang="en-US">Resource not found for the segment Products.</message>\
+  </error>';
 
 var sServiceDocXML = '\<?xml version="1.0" encoding="utf-8" standalone="yes"?>\
 	<service xml:base="http://services.odata.org/V2/Northwind/Northwind.svc/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:app="http://www.w3.org/2007/app" xmlns="http://www.w3.org/2007/app">\

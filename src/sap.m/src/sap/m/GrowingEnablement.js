@@ -3,8 +3,22 @@
  */
 
 // Provides class sap.m.GrowingEnablement
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'sap/ui/core/format/NumberFormat', 'sap/m/library', 'sap/ui/model/ChangeReason', 'sap/ui/base/ManagedObjectMetadata', 'sap/ui/core/HTML'],
-	function(jQuery, BaseObject, NumberFormat, library, ChangeReason, ManagedObjectMetadata, HTML) {
+sap.ui.define([
+	'sap/ui/base/Object',
+	'sap/ui/core/format/NumberFormat',
+	'sap/m/library',
+	'sap/ui/model/ChangeReason',
+	'sap/ui/base/ManagedObjectMetadata',
+	'sap/ui/core/HTML'
+],
+	function(
+		BaseObject,
+		NumberFormat,
+		library,
+		ChangeReason,
+		ManagedObjectMetadata,
+		HTML
+	) {
 	"use strict";
 
 
@@ -134,6 +148,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'sap/ui/core/format/Nu
 		},
 
 		onScrollToLoad: function() {
+			if (this._oControl.getDomRef("triggerList").style.display != "none") {
+				return;
+			}
+
 			if (!this._bLoading && this._oControl.getGrowingDirection() == ListGrowingDirection.Upwards) {
 				var oScrollDelegate = this._oScrollDelegate;
 				this._oScrollPosition = {
@@ -273,7 +291,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'sap/ui/core/format/Nu
 			}
 
 			// after growing-button gets hidden scroll container should still be scrollable
-			return this._oScrollDelegate.getMaxScrollTop() > 80;
+			return this._oScrollDelegate.getMaxScrollTop() > this._oControl.getDomRef("triggerList").clientHeight;
 		},
 
 		// destroy all items in the list and cleanup

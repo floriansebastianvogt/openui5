@@ -25,7 +25,9 @@ sap.ui.define([
 	"sap/ui/core/library",
 	"sap/ui/base/ManagedObject",
 	"./MessageViewRenderer",
-	"jquery.sap.keycodes"
+	"sap/ui/thirdparty/jquery",
+	"sap/ui/events/KeyCodes",
+	"sap/base/Log"
 ], function(
 	jQuery,
 	Control,
@@ -48,7 +50,10 @@ sap.ui.define([
 	GroupHeaderListItem,
 	coreLibrary,
 	ManagedObject,
-	MessageViewRenderer
+	MessageViewRenderer,
+	jQueryDOM,
+	KeyCodes,
+	Log
 ) {
 	"use strict";
 
@@ -77,6 +82,8 @@ sap.ui.define([
 	 * <br><br>
 	 * <strong>Notes:</strong>
 	 * <ul>
+	 * <li>If your application changes its model between two interactions with the MessageView, this could lead to outdated messages being shown.
+	 * To avoid this, you need to call <code>navigateBack</code> on the MessageView BEFORE opening its container.</li>
 	 * <li> Messages can have descriptions pre-formatted with HTML markup. In this case, the <code>markupDescription</code> has to be set to <code>true</code>. </li>
 	 * <li> If the message cannot be fully displayed or includes a long description, the MessageView provides navigation to the detailed description. </li>
 	 * </ul>
@@ -242,7 +249,7 @@ sap.ui.define([
 					},
 					error: function () {
 						var sError = "A request has failed for long text data. URL: " + sLongTextUrl;
-						jQuery.sap.log.error(sError);
+						Log.error(sError);
 						config.promise.reject(sError);
 					}
 				});
@@ -291,8 +298,31 @@ sap.ui.define([
 		});
 	};
 
+	/**
+	 * Handles navigate event of the NavContainer
+	 *
+	 * @private
+	 */
+	MessageView.prototype._afterNavigate = function () {
+		setTimeout(this["_restoreFocus"].bind(this), 0);
+	};
+
+	/**
+	 * Restores the focus after navigation
+	 *
+	 * @private
+	 */
+	MessageView.prototype._restoreFocus = function () {
+		if (this._isListPage() && this.getItems().length) {
+			this._oLists[this._sCurrentList || 'all'].focus();
+		} else if (this._oBackButton){
+			this._oBackButton.focus();
+		}
+	};
+
 	MessageView.prototype.onBeforeRendering = function () {
-		var oGroupedItems, aItems = this.getItems();
+		var oGroupedItems,
+			aItems = this.getItems();
 
 		this._clearLists();
 		this._detailsPage.setShowHeader(this.getShowDetailsPageHeader());
@@ -456,7 +486,7 @@ sap.ui.define([
 	 * @private
 	 */
 	MessageView.prototype._onkeypress = function (oEvent) {
-		if (oEvent.shiftKey && oEvent.keyCode == jQuery.sap.KeyCodes.ENTER) {
+		if (oEvent.shiftKey && oEvent.keyCode == KeyCodes.ENTER) {
 			this.navigateBack();
 		}
 	};
@@ -577,7 +607,8 @@ sap.ui.define([
 		// Initialize nav container with two main pages
 		this._navContainer = new NavContainer(this.getId() + "-navContainer", {
 			initialPage: this.getId() + "listPage",
-			pages: [this._listPage, this._detailsPage]
+			pages: [this._listPage, this._detailsPage],
+			afterNavigate: this._afterNavigate.bind(this)
 		});
 
 		this.setAggregation("_navContainer", this._navContainer);
@@ -680,12 +711,15 @@ sap.ui.define([
 		if (listItemType !== ListType.Navigation) {
 			oListItem.addEventDelegate({
 				onAfterRendering: function () {
-					var oItemDomRef = this.getDomRef().querySelector(".sapMSLITitleDiv > div");
+					var oItemDomRef = oListItem.getDomRef().querySelector(".sapMSLITitleDiv > div");
 					if (oItemDomRef.offsetWidth < oItemDomRef.scrollWidth) {
-						this.setType(ListType.Navigation);
+						oListItem.setType(ListType.Navigation);
+						if (this.getItems().length === 1) {
+							this._fnHandleForwardNavigation(oListItem, "show");
+						}
 					}
 				}
-			}, oListItem);
+			}, this);
 		}
 
 		oListItem._oMessageItem = oMessageItem;
@@ -716,7 +750,7 @@ sap.ui.define([
 			case MessageType.None:
 				return ValueState.None;
 			default:
-				jQuery.sap.log.warning("The provided MessageType is not mapped to a specific ValueState", sType);
+				Log.warning("The provided MessageType is not mapped to a specific ValueState", sType);
 				return null;
 		}
 	};
@@ -771,13 +805,15 @@ sap.ui.define([
 
 		LIST_TYPES.forEach(function (sListName) {
 			var oList = this._oLists[sListName],
+				sBundleText = sListName == "all" ? "MESSAGEPOPOVER_ALL" : "MESSAGEVIEW_BUTTON_TOOLTIP_" + sListName.toUpperCase(),
 				iCount = oList.getItems().filter(function(oItem) {
 					return (oItem instanceof StandardListItem);
 				}).length, oButton;
 
 			if (iCount > 0) {
 				oButton = new Button(this.getId() + "-" + sListName, {
-					text: sListName == "all" ? this._oResourceBundle.getText("MESSAGEPOPOVER_ALL") : iCount,
+					text: sListName == "all" ? this._oResourceBundle.getText(sBundleText) : iCount,
+					tooltip: this._oResourceBundle.getText(sBundleText),
 					icon: ICONS[sListName],
 					press: pressClosure(sListName)
 				}).addStyleClass(CSS_CLASS + "Btn" + sListName.charAt(0).toUpperCase() + sListName.slice(1));
@@ -891,7 +927,7 @@ sap.ui.define([
 			return sUrl;
 		}
 
-		jQuery.sap.log.warning("You have entered invalid URL");
+		Log.warning("You have entered invalid URL");
 
 		return "";
 	};
@@ -994,12 +1030,12 @@ sap.ui.define([
 				oValidation
 					.then(function (result) {
 						// Update link in output
-						var $link = jQuery.sap.byId("sap-ui-" + that.getId() + "-link-under-validation-" + result.id);
+						var $link = jQueryDOM(document.getElementById("sap-ui-" + that.getId() + "-link-under-validation-" + result.id));
 
 						if (result.allowed) {
-							jQuery.sap.log.info("Allow link " + href);
+							Log.info("Allow link " + href);
 						} else {
-							jQuery.sap.log.info("Disallow link " + href);
+							Log.info("Disallow link " + href);
 						}
 
 						// Adapt the link style
@@ -1009,7 +1045,7 @@ sap.ui.define([
 						that.fireUrlValidated();
 					})
 					.catch(function () {
-						jQuery.sap.log.warning("Async URL validation could not be performed.");
+						Log.warning("Async URL validation could not be performed.");
 					});
 			}
 
@@ -1023,7 +1059,9 @@ sap.ui.define([
 	 * @private
 	 */
 	MessageView.prototype._sanitizeDescription = function (oMessageItem) {
+		//TODO: global jquery call found
 		jQuery.sap.require("jquery.sap.encoder");
+		//TODO: global jquery call found
 		jQuery.sap.require("sap.ui.thirdparty.caja-html-sanitizer");
 		var sDescription = oMessageItem.getDescription();
 
@@ -1077,7 +1115,7 @@ sap.ui.define([
 			oPromise
 				.then(proceed)
 				.catch(function () {
-					jQuery.sap.log.warning("Async description loading could not be performed.");
+					Log.warning("Async description loading could not be performed.");
 					proceed();
 				});
 

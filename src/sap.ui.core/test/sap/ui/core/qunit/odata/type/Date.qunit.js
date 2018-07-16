@@ -2,12 +2,13 @@
  *{copyright}
  */
 sap.ui.require([
-	"jquery.sap.global",
-	"sap/ui/core/format/DateFormat",
-	"sap/ui/model/odata/type/Date",
-	"sap/ui/model/odata/type/ODataType",
-	"sap/ui/test/TestUtils"
-], function (jQuery, DateFormat, DateType, ODataType, TestUtils) {
+    "jquery.sap.global",
+    "sap/ui/core/format/DateFormat",
+    "sap/ui/model/odata/type/Date",
+    "sap/ui/model/odata/type/ODataType",
+    "sap/ui/test/TestUtils",
+    "sap/base/Log"
+], function(jQuery, DateFormat, DateType, ODataType, TestUtils, Log) {
 	/*global QUnit */
 	/*eslint no-warning-comments: 0 */ //no ESLint warning for TODO list
 	"use strict";
@@ -33,7 +34,8 @@ sap.ui.require([
 				assert.ok(false);
 			} catch (e) {
 				assert.ok(e instanceof fnExpectedException, sReason + ": exception");
-				assert.strictEqual(e.message, "EnterDate Nov 27, 2014", sReason + ": message");
+				assert.strictEqual(e.message, "EnterDate Dec 31, " + new Date().getFullYear(),
+					sReason + ": message");
 			}
 		});
 	}
@@ -41,7 +43,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.model.odata.type.Date", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 			sap.ui.getCore().getConfiguration().setLanguage("en-US");

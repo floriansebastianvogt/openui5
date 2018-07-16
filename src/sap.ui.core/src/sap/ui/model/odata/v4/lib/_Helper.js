@@ -4,9 +4,9 @@
 
 //Provides class sap.ui.model.odata.v4.lib._Helper
 sap.ui.define([
-	"jquery.sap.global",
-	"sap/ui/thirdparty/URI"
-], function (jQuery, URI) {
+	"sap/ui/thirdparty/URI",
+	"sap/base/Log"
+], function (URI, Log) {
 	"use strict";
 
 	var mAllowedAggregateDetails2Type =  {
@@ -374,8 +374,7 @@ sap.ui.define([
 						oResult.message = oResult.error.message.value;
 					}
 				} catch (e) {
-					jQuery.sap.log.warning(e.toString(), sBody,
-						"sap.ui.model.odata.v4.lib._Helper");
+					Log.warning(e.toString(), sBody, "sap.ui.model.odata.v4.lib._Helper");
 				}
 			} else if (sContentType === "text/plain") {
 				oResult.message = sBody;
@@ -390,7 +389,10 @@ sap.ui.define([
 		 * @param {string} sFetch
 		 *   A "fetch*" method's name
 		 * @param {boolean} [bThrow=false]
-		 *   Whether the "get*" method throws if the promise is not fulfilled
+		 *   Whether the "get*" method throws if the promise is not (yet) fulfilled instead of just
+		 *   returning <code>undefined</code> (Note:
+		 *   {@link sap.ui.model.odata.v4.ODataMetaModel#getObject} intentionally never throws
+		 *   because it is used for data binding)
 		 * @returns {function}
 		 *   A "get*" method returning the "fetch*" method's result or
 		 *   <code>undefined</code> in case the promise is not (yet) fulfilled

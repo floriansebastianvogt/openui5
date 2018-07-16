@@ -4,14 +4,14 @@
 
 // Provides control sap.m.ColumnListItem.
 sap.ui.define([
-	"jquery.sap.global",
 	"sap/ui/core/Element",
 	"sap/ui/core/library",
 	"./library",
 	"./ListItemBase",
-	"./ColumnListItemRenderer"
+	"./ColumnListItemRenderer",
+	"sap/ui/dom/jquery/Selectors" // jQuery custom selectors ":sapFocusable", ":sapTabbable"
 ],
-	function(jQuery, Element, coreLibrary, library, ListItemBase, ColumnListItemRenderer) {
+	function(Element, coreLibrary, library, ListItemBase, ColumnListItemRenderer) {
 	"use strict";
 
 

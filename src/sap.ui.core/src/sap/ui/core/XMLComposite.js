@@ -13,18 +13,55 @@
  *
  */
 sap.ui.define([
-	'jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/XMLCompositeMetadata', 'sap/ui/model/base/ManagedObjectModel', 'sap/ui/core/util/XMLPreprocessor',
-	'sap/ui/model/json/JSONModel', 'sap/ui/core/Fragment', 'sap/ui/base/ManagedObject', 'sap/ui/base/DataType', 'sap/ui/model/base/XMLNodeAttributesModel', 'sap/ui/core/util/reflection/XmlTreeModifier', 'sap/ui/model/resource/ResourceModel', 'sap/ui/model/base/XMLNodeUtils', 'sap/ui/base/ManagedObjectObserver'],
-	function (jQuery, Control, XMLCompositeMetadata, ManagedObjectModel, XMLPreprocessor, JSONModel, Fragment, ManagedObject, DataType, XMLNodeAttributesModel, XmlTreeModifier, ResourceModel, Utils, ManagedObjectObserver) {
+	'jquery.sap.global',
+	'sap/ui/core/Control',
+	'sap/ui/core/XMLCompositeMetadata',
+	'sap/ui/model/base/ManagedObjectModel',
+	'sap/ui/core/util/XMLPreprocessor',
+	'sap/ui/model/json/JSONModel',
+	'sap/ui/core/Fragment',
+	'sap/ui/base/ManagedObject',
+	'sap/ui/base/DataType',
+	'sap/ui/model/base/XMLNodeAttributesModel',
+	'sap/ui/core/util/reflection/XmlTreeModifier',
+	'sap/ui/model/resource/ResourceModel',
+	'sap/ui/model/base/XMLNodeUtils',
+	'sap/ui/base/ManagedObjectObserver',
+	'sap/base/util/ObjectPath',
+	'sap/ui/base/SyncPromise',
+	'sap/base/Log',
+	'sap/ui/performance/Measurement'
+],
+	function(
+		jQuery,
+		Control,
+		XMLCompositeMetadata,
+		ManagedObjectModel,
+		XMLPreprocessor,
+		JSONModel,
+		Fragment,
+		ManagedObject,
+		DataType,
+		XMLNodeAttributesModel,
+		XmlTreeModifier,
+		ResourceModel,
+		Utils,
+		ManagedObjectObserver,
+		ObjectPath,
+		SyncPromise,
+		Log,
+		Measurement
+	) {
 		"use strict";
 
 		// private functions
-		var mControlImplementations = {};
+		var mControlImplementations = {}, sXMLComposite = "sap.ui.core.XMLComposite";
 
 		function initXMLComposite(sFragment, oFragmentContext) {
 			if (!mControlImplementations[sFragment]) {
+				//TODO: global jquery call found
 				jQuery.sap.require(sFragment);
-				mControlImplementations[sFragment] = jQuery.sap.getObject(sFragment);
+				mControlImplementations[sFragment] = ObjectPath.get(sFragment);
 			}
 			return mControlImplementations[sFragment];
 		}
@@ -35,6 +72,9 @@ sap.ui.define([
 			oAttributesModel.getVisitor = function () {
 				return oVisitor;
 			};
+
+			//needed in the preprocessor to allow promises as result
+			oAttributesModel.$$valueAsPromise = true;
 
 			oAttributesModel._getObject = function (sPath, oContext) {
 				var oResult;
@@ -53,16 +93,16 @@ sap.ui.define([
 						return oProperty.defaultValue;
 					}
 					// try to resolve a result from templating time or keep the original value
-					oResult = oVisitor.getResult(oElement.getAttribute(sPath)) || oElement.getAttribute(sPath);
-					if (oResult) {
-						var oScalar = Utils.parseScalarType(oProperty.type, oResult, sPath);
-						if (typeof oScalar === "object" && oScalar.path) {
-							return oResult;
+					return SyncPromise.resolve(oVisitor.getResult(oElement.getAttribute(sPath)) || oElement.getAttribute(sPath)).then(function(oPromiseResult) {
+						if (oPromiseResult) {
+							var oScalar = Utils.parseScalarType(oProperty.type, oPromiseResult, sPath);
+							if (typeof oScalar === "object" && oScalar.path) {
+								return oPromiseResult;
+							}
+							return oScalar;
 						}
-						return oScalar;
-					}
-					return null;
-
+						return null;
+					});
 				} else if (mAggregations.hasOwnProperty(aPath[0])) {
 					var oAggregation = mAggregations[aPath[0]];
 					var oAggregationModel, oContent = XmlTreeModifier.getAggregation(oElement, aPath[0]);
@@ -81,6 +121,7 @@ sap.ui.define([
 						oResult = aContexts;
 					} else {
 						oAggregationModel = new XMLNodeAttributesModel(oContent, oVisitor, "");
+						oAggregationModel.$$valueAsPromise = true;//for Preprocessor
 						oResult = oAggregationModel.getContext("/");
 					}
 
@@ -93,20 +134,20 @@ sap.ui.define([
 						return oSpecialSetting.defaultValue || null;
 					}
 
-					oResult = oVisitor.getResult(oElement.getAttribute(sPath));
-
-					if (oSpecialSetting.type) {
-						var oScalar = Utils.parseScalarType(oSpecialSetting.type, oResult, sPath);
-						if (typeof oScalar === "object" && oScalar.path) {
-							return oResult;
+					return SyncPromise.resolve(oVisitor.getResult(oElement.getAttribute(sPath))).then(function(oPromiseResult) {
+						if (oSpecialSetting.type) {
+							var oScalar = Utils.parseScalarType(oSpecialSetting.type, oPromiseResult, sPath);
+							if (typeof oScalar === "object" && oScalar.path) {
+								return oPromiseResult;
+							}
+							return oScalar;
 						}
-						return oScalar;
-					}
 
-					if (oResult) {
-						return oResult;
-					}
-					return oElement.getAttribute(sPath);
+						if (oPromiseResult) {
+							return oPromiseResult;
+						}
+						return oElement.getAttribute(sPath);
+					});
 				}
 			};
 
@@ -218,7 +259,7 @@ sap.ui.define([
 		}
 
 		function templateAggregations(oParent, oMetadata, oContextVisitor) {
-			var aAggregationFragments = oMetadata._aggregationFragments,
+			var aAggregationFragments = oMetadata._aggregationFragments, aAggregationPromises = [],
 				sLibrary = oMetadata.getLibraryName(),
 				bCheckMultiple;
 			if (aAggregationFragments) {
@@ -244,7 +285,7 @@ sap.ui.define([
 
 					var oAggregationFragment = aAggregationFragments[sAggregationName].cloneNode(true);
 					// resolve templating in composite aggregation fragment
-					oContextVisitor.visitChildNodes(oAggregationFragment);
+					aAggregationPromises.push(oContextVisitor.visitChildNodes(oAggregationFragment).then(function() {
 					var aAggregationNodes = Utils.getChildren(oAggregationFragment);
 					var id = oParent.getAttribute("id");
 
@@ -255,8 +296,10 @@ sap.ui.define([
 						}
 						oAggregationRoot.appendChild(aAggregationNodes[j]);
 					}
+					}));
 				});
 			}
+			return Promise.all(aAggregationPromises);
 		}
 
 		function observeChanges(oChanges) {
@@ -264,7 +307,38 @@ sap.ui.define([
 				oMember = oMetadata.getProperty(sName) || oMetadata.getAggregation(sName) || oMetadata.getAllPrivateAggregations()[sName];
 
 			if (oMember) {
-				oMetadata._requestFragmentRetemplatingCheck(this, oMember);
+				this._requestFragmentRetemplatingCheck(oMember);
+			}
+		}
+
+		//repair the event handler registry
+		function repairListener(oControl, oTemplate, oClone) {
+			var sKey, vAggregation, i, aEvents;
+
+			if (!oControl) {
+				return;
+			}
+
+			for (var sEvent in oControl.mEventRegistry) {
+				aEvents = oControl.mEventRegistry[sEvent];
+				for (i = 0; i < aEvents.length; i++) {
+					if (aEvents[i].oListener == oTemplate) {
+						aEvents[i].oListener = oClone;
+					}
+				}
+			}
+
+			//dive in the Aggregations
+			for (sKey in oControl.mAggregations) {
+				vAggregation = oControl.mAggregations[sKey];
+
+				if (!Array.isArray(vAggregation)) {
+					vAggregation = [vAggregation];
+				}
+
+				for (i = 0; i < vAggregation.length; i++) {
+					repairListener(vAggregation[i], oTemplate, oClone);
+				}
 			}
 		}
 
@@ -377,6 +451,7 @@ sap.ui.define([
 		 * @version ${version}
 		 * @since 1.56.0
 		 * @alias sap.ui.core.XMLComposite
+		 * @see {@link topic:b83a4dcb7d0e46969027345b8d32fd44 XML Composite Controls}
 		 *
 		 * @abstract
 		   * @public
@@ -410,7 +485,8 @@ sap.ui.define([
 					_content: {
 						type: "sap.ui.core.Control",
 						multiple: false,
-						visibility: "hidden"
+						visibility: "hidden",
+						invalidate: true
 					}
 				}
 			},
@@ -419,14 +495,10 @@ sap.ui.define([
 
 				Control.apply(this,arguments);
 				delete this._bIsCreating;
-				if (this.getMetadata().usesTemplating() && !this._bIsInitialized) {
-					//for the case the template is written against the ManagedObjectModel a templating before
-					//creating was not possible so we have to retemplate against the Managed Object model
-					this.requestFragmentRetemplating();
-					delete this._bIsInitialized;
-				}
 			},
 			renderer: function (oRm, oControl) {
+				Log.debug("Start rendering '" + oControl.sId, sXMLComposite);
+				Measurement.start(oControl.getId() + "---renderControl","Rendering of " + oControl.getMetadata().getName(), ["rendering","control"]);
 				oRm.write("<div");
 				oRm.writeControlData(oControl);
 
@@ -448,11 +520,13 @@ sap.ui.define([
 				oRm.write(">");
 
 				// render the content
-				var oContent = oControl.getAggregation(oControl.getMetadata().getCompositeAggregationName());
+				var oContent = oControl._renderingContent ? oControl._renderingContent() : oControl._getCompositeAggregation();
 				if (oContent) {
 					oRm.renderControl(oContent);
 				}
 				oRm.write("</div>");
+				Measurement.end(oControl.getId() + "---renderControl");
+				Log.debug("Stop rendering '" + oControl.sId, sXMLComposite);
 			}
 		}, XMLCompositeMetadata);
 
@@ -467,22 +541,12 @@ sap.ui.define([
 
 		XMLComposite.prototype.clone = function () {
 			var oClone = ManagedObject.prototype.clone.apply(this, arguments);
-			var aEvents, i, oContent = oClone.get_content();
-			if (oContent) {
-				//while cloning the children are also cloned which may yield in case the children
-				//use the composite as event handler that the clones use the template this is fixed here
-				for (var sEvent in oContent.mEventRegistry) {
-					aEvents = oContent.mEventRegistry[sEvent];
-					for (var i = 0; i < aEvents.length; i++) {
-						if (aEvents[i].oListener == this) {
-							aEvents[i].oListener = oClone;
-						}
-					}
-				}
-			}
+			var oContent = oClone._renderingContent ? oClone._renderingContent() : oClone._getCompositeAggregation();
+			repairListener(oContent, this, oClone);
 			//also if the compisite is clone when already having children the propagated models are so far not set
 			//fix that
 			oClone.oPropagatedProperties = this.oPropagatedProperties;
+			oClone._bIsClone = true;
 			return oClone;
 		};
 
@@ -530,7 +594,7 @@ sap.ui.define([
 				return true;
 			}
 			bSuppressInvalidate = oMetadata._suppressInvalidate(oAggregation, bSuppressInvalidate);
-			oMetadata._requestFragmentRetemplatingCheck(this, oAggregation);
+			this._requestFragmentRetemplatingCheck(oAggregation);
 			return bSuppressInvalidate;
 		};
 
@@ -620,10 +684,9 @@ sap.ui.define([
 		 * @private
 		 */
 		XMLComposite.prototype._destroyCompositeAggregation = function () {
-			var sCompositeName = this.getMetadata().getCompositeAggregationName(),
-				oContent = this.getAggregation(sCompositeName);
+			var oContent = this._getCompositeAggregation();
 			if (oContent) {
-				oContent.destroy();
+				oContent.destroy("KeepDom");
 			}
 			return this;
 		};
@@ -648,6 +711,14 @@ sap.ui.define([
 				}
 			}
 			return oResult;
+		};
+
+		/**
+		 * Returns the composite aggregation
+		 */
+		XMLComposite.prototype._getCompositeAggregation = function () {
+			var sCompositeName = this.getMetadata().getCompositeAggregationName();
+			return this.getAggregation(sCompositeName);
 		};
 
 		/**
@@ -676,7 +747,6 @@ sap.ui.define([
 				}
 			}
 			this.setAggregation(sCompositeName, oNewContent);
-			this.invalidate();
 		};
 
 		/**
@@ -713,7 +783,9 @@ sap.ui.define([
 			} else {
 				// we rely on the library bundle
 				this.sLibraryName = this.sLibraryName || this.getMetadata().getLibraryName();
-				return XMLComposite.getLibraryResourceModel(this.sLibraryName);
+				if (this.sLibraryName) {
+					return XMLComposite.getLibraryResourceModel(this.sLibraryName);
+				}
 			}
 		};
 
@@ -739,6 +811,10 @@ sap.ui.define([
 			if (this.observer) {
 				this.observer.destroy();
 			}
+
+			if (this._oManagedObjectModel) {
+				this._oManagedObjectModel.destroy();
+			}
 		};
 
 		/**
@@ -751,18 +827,16 @@ sap.ui.define([
 			var oMetadata = this.getMetadata(),
 				sAggregationName = oMetadata.getCompositeAggregationName(),
 				bInitialized = false;
-			if (mSettings && sAggregationName) {
+			if (mSettings && sAggregationName && mSettings[sAggregationName]) {
 				//this branch is taken if the _content of the compostie is there at creation time
 				var oNode = mSettings[sAggregationName];
 				if (oNode instanceof ManagedObject) {
 					//this happens either if we clone an existing composite and the children are already present
 					//note that we adapted the event handling in the clone method that is enhanced in the composite
-					this._destroyCompositeAggregation();
 					this._setCompositeAggregation(oNode);
 					bInitialized = true;
-				} else {
+				} else if (oNode.localName === "FragmentDefinition") {
 					//or if a preprocessing like in the mdc:Table has happened
-					if (oNode && oNode.localName === "FragmentDefinition") {
 						this._destroyCompositeAggregation();
 						this._setCompositeAggregation(sap.ui.xmlfragment({
 							sId: this.getId(),
@@ -770,25 +844,51 @@ sap.ui.define([
 							oController: this
 						}));
 						bInitialized = true;
-					}
 				}
 				delete mSettings[sAggregationName];
 			}
 			if (!bInitialized) {
 				//at this end the composite is not preprocessed or cloned
-				this._destroyCompositeAggregation();
 				if (!this.getMetadata().usesTemplating()) {
 					//in case there is no templating it is possible to insert the fragment as content
-					//Note: The applySettings comes later hence in this case there is no Managed Object model
+					//Note the fragment can also contain composites and all that runs in a promise
+					this._destroyCompositeAggregation();
 					this._setCompositeAggregation(sap.ui.xmlfragment({
 						sId: this.getId(),
 						fragmentContent: this.getMetadata()._fragment,
 						oController: this
 					}));
-					bInitialized = true;
+				} else {
+					this._requestFragmentRetemplatingCheck();
 				}
 			}
 			this._bIsInitialized = bInitialized;
+		};
+
+		XMLComposite.prototype._requestFragmentRetemplatingCheck = function (oMember, bForce) {
+			//also allow empty member
+			var bRetemplate = true, oMetadata = this.getMetadata();
+			if (oMember) {
+				bRetemplate = !this._bIsCreating && !this._bIsBeingDestroyed && !this._requestFragmentRetemplatingPending  && oMember.appData && oMember.appData.invalidate === oMetadata.InvalidationMode.Template;
+			}
+
+			if (!bRetemplate) {
+				return;
+			}
+
+			if (!this._requestFragmentRetemplatingPending) {
+				if (this.requestFragmentRetemplating) {
+					this._requestFragmentRetemplatingPending = true;
+					// to avoid several separate re-templating requests we collect them
+					// in a timeout
+					setTimeout(function () {
+						this.requestFragmentRetemplating(bForce);
+						this._requestFragmentRetemplatingPending = false;
+					}.bind(this), 0);
+				} else {
+					throw new Error("Function requestFragmentRetemplating not available although invalidationMode was set to template");
+				}
+			}
 		};
 
 		/**
@@ -801,9 +901,15 @@ sap.ui.define([
 		XMLComposite.prototype.requestFragmentRetemplating = function (bForce) {
 			// check all binding context of aggregations
 			if (bForce) {
-				this.fragmentRetemplating();
+				return this.fragmentRetemplating();
+			}
+
+			//inital check for clone
+			if (this._bIsClone && (this._renderingContent ? this._renderingContent() : this._getCompositeAggregation())) {
+				delete this._bIsClone;
 				return;
 			}
+
 			var mAggregations = this.getMetadata().getMandatoryAggregations(),
 				bBound = true;
 			for (var n in mAggregations) {
@@ -882,13 +988,15 @@ sap.ui.define([
 			addViewContext(mContexts,oVisitor);
 			var oContextVisitor = oVisitor["with"](mContexts, true);
 			//visit the children of the element in case this uses templating
-			oContextVisitor.visitChildNodes(oElement);
-			templateAggregations(oElement, oMetadata, oContextVisitor);
-			// resolve templating
-			oContextVisitor.visitChildNodes(oFragment);
-			var oNode = oFragment.ownerDocument.createElementNS("http://schemas.sap.com/sapui5/extension/sap.ui.core.xmlcomposite/1", oMetadata.getCompositeAggregationName());
-			oNode.appendChild(oFragment);
-			oElement.appendChild(oNode);
+			return oContextVisitor.visitChildNodes(oElement).then(function() {
+				return templateAggregations(oElement, oMetadata, oContextVisitor);
+			}).then(function() {
+				return oContextVisitor.visitChildNodes(oFragment);
+			}).then(function() {
+				var oNode = oFragment.ownerDocument.createElementNS("http://schemas.sap.com/sapui5/extension/sap.ui.core.xmlcomposite/1", oMetadata.getCompositeAggregationName());
+				oNode.appendChild(oFragment);
+				oElement.appendChild(oNode);
+			});
 		};
 
 		return XMLComposite;

@@ -3,8 +3,14 @@
  */
 
 // Provides class sap.ui.base.Metadata
-sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
-	function(jQuery, Device /* , jQuerySap */) {
+sap.ui.define([
+	'sap/base/util/ObjectPath',
+	'sap/ui/Device',
+	"sap/base/assert",
+	"sap/base/Log",
+	"sap/base/util/array/uniqueSort"
+],
+	function(ObjectPath, Device, assert, Log, uniqueSort) {
 	"use strict";
 
 
@@ -26,15 +32,15 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
 	 */
 	var Metadata = function(sClassName, oClassInfo) {
 
-		jQuery.sap.assert(typeof sClassName === "string" && sClassName, "Metadata: sClassName must be a non-empty string");
-		jQuery.sap.assert(typeof oClassInfo === "object", "Metadata: oClassInfo must be empty or an object");
+		assert(typeof sClassName === "string" && sClassName, "Metadata: sClassName must be a non-empty string");
+		assert(typeof oClassInfo === "object", "Metadata: oClassInfo must be empty or an object");
 
 		// support for old usage of Metadata
 		if ( !oClassInfo || typeof oClassInfo.metadata !== "object" ) {
 			oClassInfo = {
 				metadata : oClassInfo || {},
 				// retrieve class by its name. Using a lookup costs time but avoids the need for redundant arguments to this function
-				constructor : jQuery.sap.getObject(sClassName)
+				constructor : ObjectPath.get(sClassName)
 			};
 			oClassInfo.metadata.__version = 1.0;
 		}
@@ -70,14 +76,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
 
 		if ( oStaticInfo.baseType ) {
 			// lookup base class by its name - same reasoning as above
-			var oParentClass = jQuery.sap.getObject(oStaticInfo.baseType);
+			var oParentClass = ObjectPath.get(oStaticInfo.baseType);
 			if ( typeof oParentClass !== "function" ) {
-				jQuery.sap.log.fatal("base class '" + oStaticInfo.baseType + "' does not exist");
+				Log.fatal("base class '" + oStaticInfo.baseType + "' does not exist");
 			}
 			// link metadata with base metadata
 			if ( oParentClass.getMetadata ) {
 				this._oParent = oParentClass.getMetadata();
-				jQuery.sap.assert(oParentClass === oParentClass.getMetadata().getClass(), "Metadata: oParentClass must match the class in the parent metadata");
+				assert(oParentClass === oParentClass.getMetadata().getClass(), "Metadata: oParentClass must match the class in the parent metadata");
 			} else {
 				// fallback, if base class has no metadata
 				this._oParent = new Metadata(oStaticInfo.baseType, {});
@@ -178,9 +184,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
 	 */
 	Metadata.prototype._dedupInterfaces = function () {
 		if (!this._bInterfacesUnique) {
-			jQuery.sap.unique(this._aInterfaces);
-			jQuery.sap.unique(this._aPublicMethods);
-			jQuery.sap.unique(this._aAllPublicMethods);
+			uniqueSort(this._aInterfaces);
+			uniqueSort(this._aPublicMethods);
+			uniqueSort(this._aAllPublicMethods);
 			this._bInterfacesUnique = true;
 		}
 	};
@@ -401,10 +407,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
 			fnBaseClass = null;
 		}
 
-		jQuery.sap.assert(!fnBaseClass || typeof fnBaseClass === "function");
-		jQuery.sap.assert(typeof sClassName === "string" && !!sClassName);
-		jQuery.sap.assert(!oClassInfo || typeof oClassInfo === "object");
-		jQuery.sap.assert(!FNMetaImpl || typeof FNMetaImpl === "function");
+		assert(!fnBaseClass || typeof fnBaseClass === "function");
+		assert(typeof sClassName === "string" && !!sClassName);
+		assert(!oClassInfo || typeof oClassInfo === "object");
+		assert(!FNMetaImpl || typeof FNMetaImpl === "function");
 
 		// allow metadata class to preprocess
 		FNMetaImpl = FNMetaImpl || Metadata;
@@ -420,7 +426,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
 		}
 
 		var fnClass = oClassInfo.constructor;
-		jQuery.sap.assert(!fnClass || typeof fnClass === "function");
+		assert(!fnClass || typeof fnClass === "function");
 
 		// ensure defaults
 		if ( fnBaseClass ) {
@@ -429,7 +435,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
 				if ( oClassInfo.metadata.deprecated ) {
 				  // create default factory with deprecation warning
 					fnClass = function() {
-						jQuery.sap.log.warning("Usage of deprecated class: " + sClassName);
+						Log.warning("Usage of deprecated class: " + sClassName);
 						fnBaseClass.apply(this, arguments);
 					};
 				} else {
@@ -453,11 +459,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device', 'jquery.sap.script'],
 		oClassInfo.constructor = fnClass;
 
 		// make the class visible as JS Object
-		jQuery.sap.setObject(sClassName, fnClass);
+		ObjectPath.set(sClassName, fnClass);
 
 		// add metadata
 		var oMetadata = new FNMetaImpl(sClassName, oClassInfo);
-		fnClass.getMetadata = fnClass.prototype.getMetadata = jQuery.sap.getter(oMetadata);
+		fnClass.getMetadata = fnClass.prototype.getMetadata = function() {
+			return oMetadata;
+		};
 
 		// enrich function
 		if ( !fnClass.getMetadata().isFinal() ) {

@@ -136,7 +136,7 @@ sap.ui.define([
 			sOffset = aMatches[2] + aMatches[3] + ":"  + aMatches[4];
 		}
 		if (iPrecision > 0) {
-			sPattern += "." + jQuery.sap.padRight("", "S", iPrecision);
+			sPattern += "." + "".padEnd(iPrecision, "S");
 		}
 		if (!mPattern2Formatter[sPattern]) {
 			mPattern2Formatter[sPattern] =
@@ -895,6 +895,18 @@ sap.ui.define([
 	 */
 	_V2Requestor.prototype.ready = function () {
 		return this.oModelInterface.fnFetchEntityContainer().then(function () {});
+	};
+
+	/**
+	 * Do not report bound OData messages.
+	 */
+	_V2Requestor.prototype.reportBoundMessages = function () {
+	};
+
+	/**
+	 * Do not report unbound OData messages.
+	 */
+	_V2Requestor.prototype.reportUnboundMessages = function () {
 	};
 
 	return function (oObject) {

@@ -6,12 +6,22 @@
 sap.ui.define([
 	'jquery.sap.global',
 	'./DataType',
-	'./Metadata'
+	'./Metadata',
+	"sap/base/Log",
+	"sap/base/assert",
+	'sap/base/util/ObjectPath',
+	"sap/base/strings/escapeRegExp",
+	"sap/base/util/merge"
 ],
 function(
 	jQuery,
 	DataType,
-	Metadata
+	Metadata,
+	Log,
+	assert,
+	ObjectPath,
+	escapeRegExp,
+	merge
 ) {
 	"use strict";
 
@@ -94,7 +104,7 @@ function(
 
 	function deprecation(fn, name) {
 		return function() {
-			jQuery.sap.log.warning("Usage of deprecated feature: " + name);
+			Log.warning("Usage of deprecated feature: " + name);
 			return fn.apply(this, arguments);
 		};
 	}
@@ -447,8 +457,6 @@ function(
 
 		oInstance.mForwardedAggregations[this.aggregation.name] = oAggregatedObject;
 
-		ManagedObjectMetadata.addAPIParentInfo(oAggregatedObject, oInstance, this.aggregation.name);
-
 		if (this.targetAggregationInfo.multiple) {
 			// target aggregation is multiple, but should behave like single (because the source aggregation is single)
 			var oPreviousElement = this.targetAggregationInfo.get(oTarget);
@@ -458,10 +466,14 @@ function(
 				}
 				this.targetAggregationInfo.removeAll(oTarget);
 			}
+			ManagedObjectMetadata.addAPIParentInfoBegin(oAggregatedObject, oInstance, this.aggregation.name);
 			this.targetAggregationInfo.add(oTarget, oAggregatedObject);
 		} else {
+			ManagedObjectMetadata.addAPIParentInfoBegin(oAggregatedObject, oInstance, this.aggregation.name);
 			this.targetAggregationInfo.set(oTarget, oAggregatedObject);
 		}
+		ManagedObjectMetadata.addAPIParentInfoEnd(oAggregatedObject);
+
 		return oInstance;
 	};
 
@@ -469,9 +481,10 @@ function(
 		var oTarget = this.getTarget(oInstance);
 		// TODO oInstance.observer
 
-		ManagedObjectMetadata.addAPIParentInfo(oAggregatedObject, oInstance, this.aggregation.name);
-
+		ManagedObjectMetadata.addAPIParentInfoBegin(oAggregatedObject, oInstance, this.aggregation.name);
 		this.targetAggregationInfo.add(oTarget, oAggregatedObject);
+		ManagedObjectMetadata.addAPIParentInfoEnd(oAggregatedObject);
+
 		return oInstance;
 	};
 
@@ -479,54 +492,62 @@ function(
 		var oTarget = this.getTarget(oInstance);
 		// TODO oInstance.observer
 
-		ManagedObjectMetadata.addAPIParentInfo(oAggregatedObject, oInstance, this.aggregation.name);
-
+		ManagedObjectMetadata.addAPIParentInfoBegin(oAggregatedObject, oInstance, this.aggregation.name);
 		this.targetAggregationInfo.insert(oTarget, oAggregatedObject, iIndex);
+		ManagedObjectMetadata.addAPIParentInfoEnd(oAggregatedObject);
+
 		return oInstance;
 	};
 
 	/**
-	 * Checks whether object <code>a</code> is an inclusive descendant of object <code>b</code>.
-	 *
-	 * @param {sap.ui.base.ManagedObject} a Object that should be checked for being a descendant
-	 * @param {sap.ui.base.ManagedObject} b Object that should be checked for having a descendant
-	 * @returns {boolean} Whether <code>a</code> is a descendant of (or the same as) <code>b</code>
-	 * @private
-	 */
-	function isInclusiveDescendantOf(a, b) {
-		while ( a && a !== b ) {
-			a = a.oParent;
-		}
-		return !!a;
-	}
-
-	/**
 	 * Adds information to the given oAggregatedObject about its original API parent (or a subsequent API parent in case of multiple forwarding).
+	 * MUST be called before an element is forwarded to another internal aggregation (in case forwarding is done explicitly/manually without using
+	 * the declarative mechanism introduced in UI5 1.56).
+	 *
+	 * CAUTION: ManagedObjectMetadata.addAPIParentInfoEnd(...) MUST be called AFTER the element has been forwarded (set to an aggregation of an
+	 * internal control). These two calls must wrap the forwarding.
 	 *
 	 * @param {sap.ui.base.ManagedObject} oAggregatedObject Object to which the new API parent info should be added
 	 * @param {sap.ui.base.ManagedObject} oParent Object that is a new API parent
 	 * @param {string} sAggregationName the name of the aggregation under which oAggregatedObject is aggregated by the API parent
 	 * @protected
 	 */
-	ManagedObjectMetadata.addAPIParentInfo = function(oAggregatedObject, oParent, sAggregationName) {
+	ManagedObjectMetadata.addAPIParentInfoBegin = function(oAggregatedObject, oParent, sAggregationName) {
 		if (!oAggregatedObject) {
 			return;
 		}
 
 		var oNewAPIParentInfo = {parent: oParent, aggregationName: sAggregationName};
 
+		if (oAggregatedObject.aAPIParentInfos) {
+			if (oAggregatedObject.aAPIParentInfos.forwardingCounter) { // defined and >= 1
+				// this is another forwarding step from an element that was already the target of forwarding
+				oAggregatedObject.aAPIParentInfos.forwardingCounter++;
+			} else {
+				// this is a fresh new round of aggregation forwarding, remove any previous forwarding info
+				delete oAggregatedObject.aAPIParentInfos;
+			}
+		}
+
 		// update API parent of oAggregatedObject
 		if (!oAggregatedObject.aAPIParentInfos) {
 			oAggregatedObject.aAPIParentInfos = [oNewAPIParentInfo];
+			oAggregatedObject.aAPIParentInfos.forwardingCounter = 1;
 		} else {
-			var oPreviousAPIParentInfo = oAggregatedObject.aAPIParentInfos[oAggregatedObject.aAPIParentInfos.length - 1];
-			// if the previous API parent is not an ancestor of oInstance, oAggregatedObject is being moved to somewhere else
-			// TODO: but even IF the previous parent is an ancestor, this move may be NOT triggered by additional forwarding, but it may be a normal move further down the tree
-			if (oPreviousAPIParentInfo && !isInclusiveDescendantOf(oParent, oPreviousAPIParentInfo.parent)) {
-				oAggregatedObject.aAPIParentInfos = []; // => clear the previous API parent infos (new info will be added just below)
-			}
 			oAggregatedObject.aAPIParentInfos.push(oNewAPIParentInfo);
 		}
+	};
+
+	/**
+	 * Completes the information about the original API parent of the given element.
+	 * MUST be called after an element is forwarded to another internal aggregation. For every call to
+	 * ManagedObjectMetadata.addAPIParentInfoBegin(...) this method here must be called as well.
+	 *
+	 * @param {sap.ui.base.ManagedObject} oAggregatedObject Object to which the new API parent info should be added
+	 * @protected
+	 */
+	ManagedObjectMetadata.addAPIParentInfoEnd = function(oAggregatedObject) {
+		oAggregatedObject && oAggregatedObject.aAPIParentInfos.forwardingCounter--;
 	};
 
 	AggregationForwarder.prototype.remove = function(oInstance, vAggregatedObject) {
@@ -539,7 +560,7 @@ function(
 			// that forwards directly. That one now also sets the API parent info.
 			// When aAPIParentInfos is there, then the other conditions are always true:
 			// && result.aAPIParentInfos.length && result.aAPIParentInfos[result.aAPIParentInfos.length-1].parent === oInstance
-			result.aAPIParentInfos.pop();
+			result.aAPIParentInfos && result.aAPIParentInfos.pop();
 		}
 		return result;
 	};
@@ -624,7 +645,7 @@ function(
 			add(that._sRemoveAllMutator, function() { return this.removeAllAssociation(n); });
 			if ( n !== that.singularName ) {
 				add('removeAll' + capitalize(that.singularName), function() {
-					jQuery.sap.log.warning("Usage of deprecated method " +
+					Log.warning("Usage of deprecated method " +
 						that._oParent.getName() + ".prototype." + 'removeAll' + capitalize(that.singularName) + "," +
 						" use method " + that._sRemoveAllMutator  + " (plural) instead.");
 					return this[that._sRemoveAllMutator]();
@@ -1450,7 +1471,7 @@ function(
 	 * @private
 	 */
 	ManagedObjectMetadata.prototype._enrichChildInfos = function() {
-		jQuery.sap.log.error("obsolete call to ManagedObjectMetadata._enrichChildInfos. This private method will be deleted soon");
+		Log.error("obsolete call to ManagedObjectMetadata._enrichChildInfos. This private method will be deleted soon");
 	};
 
 	/**
@@ -1513,7 +1534,7 @@ function(
 	 */
 	ManagedObjectMetadata.prototype.removeUnknownSettings = function(mSettings) {
 
-		jQuery.sap.assert(mSettings == null || typeof mSettings === 'object', "mSettings must be null or an object");
+		assert(mSettings == null || typeof mSettings === 'object', "mSettings must be null or an object");
 
 		if ( mSettings == null ) {
 			return mSettings;
@@ -1579,6 +1600,7 @@ function(
 			var oPromise;
 			if (sPreload === "async" || sPreload === "sync") {
 				//ignore errors _loadJSResourceAsync is true here, do not break if there is no preload.
+				//TODO: global jquery call found
 				oPromise = jQuery.sap._loadJSResourceAsync(oLibrary.designtime.replace(/\.designtime$/, "-preload.designtime.js"), true);
 			} else {
 				oPromise = Promise.resolve();
@@ -1611,6 +1633,7 @@ function(
 				//oMetadata._oDesignTime points to resource path to another file, for example: "sap/ui/core/designtime/<control>.designtime"
 				sModule = oMetadata._oDesignTime;
 			} else {
+				//TODO: global jquery call found
 				sModule = jQuery.sap.getResourceName(oMetadata.getName(), ".designtime");
 			}
 			preloadDesigntimeLibrary(oMetadata).then(function(oLib) {
@@ -1632,7 +1655,7 @@ function(
 	 */
 	function loadInstanceDesignTime(oInstance) {
 		var sInstanceSpecificModule =
-			oInstance instanceof jQuery.sap.getObject('sap.ui.base.ManagedObject')
+			oInstance instanceof ObjectPath.get('sap.ui.base.ManagedObject')
 			&& typeof oInstance.data === "function"
 			&& oInstance.data("sap-ui-custom-settings")
 			&& oInstance.data("sap-ui-custom-settings")["sap.ui.dt"]
@@ -1659,8 +1682,7 @@ function(
 		var mResult = mMetadata;
 
 		if ("default" in mMetadata) {
-			mResult = jQuery.sap.extend(
-				true,
+			mResult = merge(
 				{},
 				mMetadata.default,
 				sScopeKey !== "default" && mMetadata[sScopeKey] || null
@@ -1708,12 +1730,10 @@ function(
 				return oWhenParentLoaded.then(function(mParentDesignTime) {
 					// we use jQuery.sap.extend to be able to also overwrite properties with null or undefined
 					// using deep extend to inherit full parent designtime, unwanted inherited properties have to be overwritten with undefined
-					return jQuery.sap.extend(
-						true,
+					return merge(
 						{},
 						getScopeBasedDesignTime(mParentDesignTime, sScopeKey),
-						getScopeBasedDesignTime(mOwnDesignTime, sScopeKey),
-						{
+						getScopeBasedDesignTime(mOwnDesignTime, sScopeKey), {
 							designtimeModule: mOwnDesignTime.designtimeModule || undefined,
 							_oLib: mOwnDesignTime._oLib
 						}
@@ -1726,8 +1746,7 @@ function(
 			.then(function(aData){
 				var oInstanceDesigntime = aData[0],
 					oDesignTime = aData[1];
-				return jQuery.sap.extend(
-					true,
+				return merge(
 					{},
 					oDesignTime,
 					getScopeBasedDesignTime(oInstanceDesigntime || {}, sScopeKey)
@@ -1744,7 +1763,7 @@ function(
 		sUIDPrefix;
 
 	function uid(sId) {
-		jQuery.sap.assert(!/[0-9]+$/.exec(sId), "AutoId Prefixes must not end with numbers");
+		assert(!/[0-9]+$/.exec(sId), "AutoId Prefixes must not end with numbers");
 
 		//read prefix from configuration only once
 		sId = (sUIDPrefix || (sUIDPrefix = sap.ui.getCore().getConfiguration().getUIDPrefix())) + sId;
@@ -1828,7 +1847,7 @@ function(
 	 */
 	ManagedObjectMetadata.isGeneratedId = function(sId) {
 		sUIDPrefix = sUIDPrefix || sap.ui.getCore().getConfiguration().getUIDPrefix();
-		rGeneratedUID = rGeneratedUID || new RegExp( "(^|-{1,3})" + jQuery.sap.escapeRegExp(sUIDPrefix) );
+		rGeneratedUID = rGeneratedUID || new RegExp( "(^|-{1,3})" + escapeRegExp(sUIDPrefix) );
 
 		return rGeneratedUID.test(sId);
 	};

@@ -3,8 +3,24 @@
  */
 
 // Provides the base class for all controls and UI elements.
-sap.ui.define(['jquery.sap.global', '../base/Object', '../base/ManagedObject', './ElementMetadata', '../Device', 'jquery.sap.strings', 'jquery.sap.trace'],
-	function(jQuery, BaseObject, ManagedObject, ElementMetadata, Device/* , jQuerySap */) {
+sap.ui.define([
+	'../base/Object',
+	'../base/ManagedObject',
+	'./ElementMetadata',
+	'../Device',
+	"sap/ui/performance/trace/Interaction",
+	"sap/base/Log",
+	"sap/base/assert"
+],
+	function(
+		BaseObject,
+		ManagedObject,
+		ElementMetadata,
+		Device,
+		Interaction,
+		Log,
+		assert
+	) {
 	"use strict";
 
 	/**
@@ -336,7 +352,7 @@ sap.ui.define(['jquery.sap.global', '../base/Object', '../base/ManagedObject', '
 	 * @protected
 	 */
 	Element.prototype.getDomRef = function(sSuffix) {
-		return jQuery.sap.domById(sSuffix ? this.getId() + "-" + sSuffix : this.getId());
+		return (((sSuffix ? this.getId() + "-" + sSuffix : this.getId())) ? window.document.getElementById(sSuffix ? this.getId() + "-" + sSuffix : this.getId()) : null);
 	};
 
 	/**
@@ -470,7 +486,7 @@ sap.ui.define(['jquery.sap.global', '../base/Object', '../base/ManagedObject', '
 			this.getMetadata().isInstanceOf("sap.ui.core.PopupInterface")) {
 			this.$().remove();
 		} else {
-			jQuery.sap.log.debug("DOM is not removed on destroy of " + this);
+			Log.debug("DOM is not removed on destroy of " + this);
 		}
 	};
 
@@ -486,7 +502,7 @@ sap.ui.define(['jquery.sap.global', '../base/Object', '../base/ManagedObject', '
 	 */
 	Element.prototype.fireEvent = function(sEventId, mParameters, bAllowPreventDefault, bEnableEventBubbling) {
 		if (this.hasListeners(sEventId)) {
-			jQuery.sap.interaction.notifyStepStart(this);
+			Interaction.notifyStepStart(this);
 		}
 
 		// get optional parameters right
@@ -499,9 +515,26 @@ sap.ui.define(['jquery.sap.global', '../base/Object', '../base/ManagedObject', '
 		mParameters = mParameters || {};
 		mParameters.id = mParameters.id || this.getId();
 
+		if (Element._trackEvent) {
+			Element._trackEvent(sEventId, this);
+		}
+
 		return ManagedObject.prototype.fireEvent.call(this, sEventId, mParameters, bAllowPreventDefault, bEnableEventBubbling);
 	};
 
+	/**
+	 * Tracks event. This method is meant for private usages. Apps are not supposed to used it.
+	 * It is created for an experimental purpose.
+	 * Implementation should be injected by outside(i.e. sap.ui.core.delegate.UsageAnalytics).
+	 *
+	 * @param {string} sEventId the name of the event
+	 * @param {sap.ui.core.Element} oElement the element itself
+	 * @function
+	 * @private
+	 * @experimental Since 1.58
+	 * @ui5-restricted
+	 */
+	Element._trackEvent = undefined;
 
 	/**
 	 * Adds a delegate that listens to the events of this element.
@@ -520,7 +553,7 @@ sap.ui.define(['jquery.sap.global', '../base/Object', '../base/ManagedObject', '
 	 * @private
 	 */
 	Element.prototype.addDelegate = function (oDelegate, bCallBefore, oThis, bClone) {
-		jQuery.sap.assert(oDelegate, "oDelegate must be not null or undefined");
+		assert(oDelegate, "oDelegate must be not null or undefined");
 
 		if (!oDelegate) {
 			return this;
@@ -630,7 +663,10 @@ sap.ui.define(['jquery.sap.global', '../base/Object', '../base/ManagedObject', '
 	 * @public
 	 */
 	Element.prototype.focus = function () {
-		jQuery.sap.focus(this.getFocusDomRef());
+		var oFocusDomRef = this.getFocusDomRef();
+		if (oFocusDomRef) {
+			oFocusDomRef.focus();
+		}
 	};
 
 	/**

@@ -2,20 +2,34 @@
  *{copyright}
  */
 sap.ui.require([
-	"jquery.sap.global",
-	"sap/ui/core/Control",
-	"sap/ui/core/format/DateFormat",
-	"sap/ui/model/FormatException",
-	"sap/ui/model/json/JSONModel",
-	"sap/ui/model/ParseException",
-	"sap/ui/model/ValidateException",
-	"sap/ui/model/odata/type/DateTime",
-	"sap/ui/model/odata/type/DateTimeBase",
-	"sap/ui/model/odata/type/DateTimeOffset",
-	"sap/ui/model/odata/type/ODataType",
-	"sap/ui/test/TestUtils"
-], function (jQuery, Control, DateFormat, FormatException, JSONModel, ParseException,
-		ValidateException, DateTime, DateTimeBase, DateTimeOffset, ODataType, TestUtils) {
+    "jquery.sap.global",
+    "sap/ui/core/Control",
+    "sap/ui/core/format/DateFormat",
+    "sap/ui/model/FormatException",
+    "sap/ui/model/json/JSONModel",
+    "sap/ui/model/ParseException",
+    "sap/ui/model/ValidateException",
+    "sap/ui/model/odata/type/DateTime",
+    "sap/ui/model/odata/type/DateTimeBase",
+    "sap/ui/model/odata/type/DateTimeOffset",
+    "sap/ui/model/odata/type/ODataType",
+    "sap/ui/test/TestUtils",
+    "sap/base/Log"
+], function(
+    jQuery,
+	Control,
+	DateFormat,
+	FormatException,
+	JSONModel,
+	ParseException,
+	ValidateException,
+	DateTime,
+	DateTimeBase,
+	DateTimeOffset,
+	ODataType,
+	TestUtils,
+	Log
+) {
 	/*global QUnit */
 	/*eslint no-warning-comments: 0 */
 	"use strict";
@@ -29,9 +43,10 @@ sap.ui.require([
 		sFormattedDateTime = "Nov 27, 2014, 1:47:26 PM",
 		sDateTimeOffsetWithMS = "2014-11-27T13:47:26.456" + getTimezoneOffset(oDateTime),
 //		sFormattedDateTimeWithMS = "Nov 27, 2014, 1:47:26.456 PM",
+		iFullYear = new Date().getFullYear(),
 		oMessages = {
-			"EnterDateTime" : "EnterDateTime Nov 27, 2014, 1:47:26 PM",
-			"EnterDate" : "EnterDate Nov 27, 2014"
+			"EnterDateTime" : "EnterDateTime Dec 31, " + iFullYear + ", 11:59:58 PM",
+			"EnterDate" : "EnterDate Dec 31, " + iFullYear
 		};
 
 	function createInstance(sTypeName, oFormatOptions, oConstraints) {
@@ -74,7 +89,7 @@ sap.ui.require([
 	function module(sTitle) {
 		QUnit.module(sTitle, {
 			beforeEach : function () {
-				this.oLogMock = this.mock(jQuery.sap.log);
+				this.oLogMock = this.mock(Log);
 				this.oLogMock.expects("warning").never();
 				this.oLogMock.expects("error").never();
 				sap.ui.getCore().getConfiguration().setLanguage("en-US");

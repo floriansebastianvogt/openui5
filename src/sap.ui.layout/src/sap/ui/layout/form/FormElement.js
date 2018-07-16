@@ -3,8 +3,13 @@
  */
 
 // Provides control sap.ui.layout.form.FormElement.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/base/ManagedObjectObserver', 'sap/ui/layout/library'],
-	function(jQuery, Element, ManagedObjectObserver, library) {
+sap.ui.define([
+	'sap/ui/core/Element',
+	'sap/ui/core/Control',
+	'sap/ui/base/ManagedObjectObserver',
+	'sap/ui/layout/library',
+	"sap/base/Log"
+	], function(Element, Control, ManagedObjectObserver, library, Log) {
 	"use strict";
 
 	/**
@@ -352,7 +357,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/base/ManagedO
 
 		if (sMutation == "insert") {
 			if (!oField.isA("sap.ui.core.IFormContent")) {
-				jQuery.sap.log.warning(oField + " is not valid Form content", this);
+				Log.warning(oField + " is not valid Form content", this);
 			}
 			_attachDelegate.call(this, oField);
 		} else {
@@ -450,7 +455,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/base/ManagedO
 			oLabel.setLabelFor(oField); // as Label is internal of FormElement, we can use original labelFor
 		} else {
 			oLabel = this.getLabel();
-			if (oLabel instanceof sap.ui.core.Control /*might also be a string*/) {
+			if (oLabel instanceof Control /*might also be a string*/) {
 				oLabel.setAlternativeLabelFor(oField);
 			}
 		}

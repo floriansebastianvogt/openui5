@@ -2,8 +2,13 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdparty/hasher'],
-	function(jQuery, EventProvider, hasher) {
+sap.ui.define([
+	'sap/ui/base/EventProvider',
+	'sap/ui/thirdparty/hasher',
+	"sap/base/Log",
+	"sap/base/util/ObjectPath"
+],
+	function(EventProvider, hasher, Log, ObjectPath) {
 	"use strict";
 
 	/**
@@ -33,7 +38,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	 */
 	HashChanger.prototype.init = function() {
 		if (this._initialized) {
-			jQuery.sap.log.info("this HashChanger instance has already been initialized.");
+			Log.info("this HashChanger instance has already been initialized.");
 			return false;
 		}
 
@@ -187,7 +192,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		HashChanger.replaceHashChanger = function(oHashChanger) {
 			if (_oHashChanger && oHashChanger) {
 
-				var fnGetHistoryInstance = jQuery.sap.getObject("sap.ui.core.routing.History.getInstance"),
+				var fnGetHistoryInstance = ObjectPath.get("sap.ui.core.routing.History.getInstance"),
 					oHistory;
 
 				if (fnGetHistoryInstance) {

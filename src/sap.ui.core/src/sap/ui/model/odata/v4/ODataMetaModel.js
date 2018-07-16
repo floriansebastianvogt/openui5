@@ -4,7 +4,6 @@
 
 //Provides class sap.ui.model.odata.v4.ODataMetaModel
 sap.ui.define([
-	"jquery.sap.global",
 	"sap/ui/base/SyncPromise",
 	"sap/ui/model/BindingMode",
 	"sap/ui/model/ChangeReason",
@@ -18,15 +17,34 @@ sap.ui.define([
 	"sap/ui/model/PropertyBinding",
 	"sap/ui/thirdparty/URI",
 	"./lib/_Helper",
-	"./ValueListType"
-], function (jQuery, SyncPromise, BindingMode, ChangeReason, ClientListBinding, ContextBinding,
-		BaseContext, MetaModel, OperationMode, Int64, Raw, PropertyBinding, URI, _Helper,
-		ValueListType) {
+	"./ValueListType",
+	"sap/base/Log",
+	"sap/base/assert",
+	"sap/base/util/ObjectPath"
+], function(
+	SyncPromise,
+	BindingMode,
+	ChangeReason,
+	ClientListBinding,
+	ContextBinding,
+	BaseContext,
+	MetaModel,
+	OperationMode,
+	Int64,
+	Raw,
+	PropertyBinding,
+	URI,
+	_Helper,
+	ValueListType,
+	Log,
+	assert,
+	ObjectPath
+) {
 	"use strict";
 	/*eslint max-nested-callbacks: 0 */
 
 	var oCountType,
-		DEBUG = jQuery.sap.log.Level.DEBUG,
+		DEBUG = Log.Level.DEBUG,
 		ODataMetaContextBinding,
 		ODataMetaListBinding,
 		sODataMetaModel = "sap.ui.model.odata.v4.ODataMetaModel",
@@ -86,7 +104,7 @@ sap.ui.define([
 		mValueListModelByUrl = {},
 		sValueListReferences = "@com.sap.vocabularies.Common.v1.ValueListReferences",
 		sValueListWithFixedValues = "@com.sap.vocabularies.Common.v1.ValueListWithFixedValues",
-		WARNING = jQuery.sap.log.Level.WARNING;
+		WARNING = Log.Level.WARNING;
 
 	/**
 	 * Adds the given reference URI to the map of reference URIs for schemas.
@@ -232,7 +250,7 @@ sap.ui.define([
 	 * @throws {Error}
 	 */
 	function logAndThrowError(sMessage, sDetails) {
-		jQuery.sap.log.error(sMessage, sDetails, sODataMetaModel);
+		Log.error(sMessage, sDetails, sODataMetaModel);
 		throw new Error(sDetails + ": " + sMessage);
 	}
 
@@ -298,7 +316,7 @@ sap.ui.define([
 	ODataMetaContextBinding
 		= ContextBinding.extend("sap.ui.model.odata.v4.ODataMetaContextBinding", {
 			constructor : function (oModel, sPath, oContext) {
-				jQuery.sap.assert(!oContext || oContext.getModel() === oModel,
+				assert(!oContext || oContext.getModel() === oModel,
 					"oContext must belong to this model");
 				ContextBinding.call(this, oModel, sPath, oContext);
 			},
@@ -315,7 +333,7 @@ sap.ui.define([
 			// @override
 			// @see sap.ui.model.Binding#setContext
 			setContext : function (oContext) {
-				jQuery.sap.assert(!oContext || oContext.getModel() === this.oModel,
+				assert(!oContext || oContext.getModel() === this.oModel,
 					"oContext must belong to this model");
 				if (oContext !== this.oContext) {
 					this.oContext = oContext;
@@ -386,7 +404,7 @@ sap.ui.define([
 				return SyncPromise.resolve([]);
 			}
 			bIterateAnnotations = sResolvedPath.slice(-1) === "@";
-			if (!bIterateAnnotations && sResolvedPath !== "/") {
+			if (!bIterateAnnotations && !sResolvedPath.endsWith("/")) {
 				sResolvedPath += "/";
 			}
 			return this.oModel.fetchObject(sResolvedPath).then(function (oResult) {
@@ -429,6 +447,9 @@ sap.ui.define([
 			for (i = this.iCurrentStart; i < n; i++) {
 				aContexts.push(this.oList[this.aIndices[i]]);
 			}
+			if (this.oList.dataRequested) {
+				aContexts.dataRequested = true;
+			}
 			return aContexts;
 		},
 
@@ -462,6 +483,7 @@ sap.ui.define([
 					that.setContexts(aContexts);
 					that._fireChange({reason: ChangeReason.Change});
 				});
+				aContexts.dataRequested = true;
 			}
 			this.setContexts(aContexts);
 		}
@@ -484,8 +506,8 @@ sap.ui.define([
 			// parameter is set to <code>true</code> or if the value has changed.
 			// If the binding parameter <code>$$valueAsPromise</code> is <code>true</code> and the
 			// value cannot be fetched synchronously then <code>getValue</code> returns a
-			// <code>SyncPromise</code> resolving with the value. After the value is resolved a
-			// second change event is fired and <code>getValue</code> returns the value itself.
+			// <code>Promise</code> resolving with the value. After the value is resolved a second
+			// change event is fired and <code>getValue</code> returns the value itself.
 			//
 			// @param {boolean} [bForceUpdate=false]
 			//   If <code>true</code>, the change event is always fired.
@@ -510,11 +532,11 @@ sap.ui.define([
 				oPromise = this.oModel.fetchObject(this.sPath, this.oContext, this.mParameters)
 					.then(setValue);
 				if (this.mParameters && this.mParameters.$$valueAsPromise && oPromise.isPending()) {
-					setValue(oPromise);
+					setValue(oPromise.unwrap());
 				}
 			},
 
-			// May return a <code>SyncPromise</code> instead of the value if
+			// May return a <code>Promise</code> instead of the value if the binding parameter
 			// <code>$$valueAsPromise</code> is <code>true</code>
 			// @override
 			// @see sap.ui.model.PropertyBinding#getValue
@@ -604,8 +626,9 @@ sap.ui.define([
 	});
 
 	/**
-	 * Indicates that the property bindings of this model may return their value as a
-	 * <code>SyncPromise</code> if the value cannot be fetched synchronously.
+	 * Indicates that the property bindings of this model support the binding parameter
+	 * <code>$$valueAsPromise</code> which allows to return the value as a <code>Promise</code> if
+	 * the value cannot be fetched synchronously.
 	 *
 	 * @private
 	 */
@@ -725,7 +748,7 @@ sap.ui.define([
 	 *   Optional binding parameters that are passed to {@link #getObject} to compute the binding's
 	 *   value; if they are given, <code>oContext</code> cannot be omitted
 	 * @param {boolean} [mParameters.$$valueAsPromise]
-	 *   Whether {@link sap.ui.model.PropertyBinding#getValue} may return a <code>SyncPromise</code>
+	 *   Whether {@link sap.ui.model.PropertyBinding#getValue} may return a <code>Promise</code>
 	 *   resolving with the value (since 1.57.0)
 	 * @param {object} [mParameters.scope]
 	 *   Optional scope for lookup of aliases for computed annotations (since 1.43.0)
@@ -851,6 +874,9 @@ sap.ui.define([
 	 *   The context to be used as a starting point in case of a relative path
 	 * @param {object} [mParameters]
 	 *   Optional (binding) parameters; if they are given, <code>oContext</code> cannot be omitted
+	 * @param {boolean} [mParameters.$$valueAsPromise]
+	 *   Whether a computed annotation may return a <code>Promise</code> resolving with its value
+	 *   (since 1.57.0)
 	 * @param {object} [mParameters.scope]
 	 *   Optional scope for lookup of aliases for computed annotations (since 1.43.0)
 	 * @returns {sap.ui.base.SyncPromise}
@@ -864,7 +890,7 @@ sap.ui.define([
 			that = this;
 
 		if (!sResolvedPath) {
-			jQuery.sap.log.error("Invalid relative path w/o context", sPath, sODataMetaModel);
+			Log.error("Invalid relative path w/o context", sPath, sODataMetaModel);
 			return SyncPromise.resolve(null);
 		}
 
@@ -905,8 +931,9 @@ sap.ui.define([
 
 				sSegment = sSegment.slice(2);
 				fnAnnotation = sSegment[0] === "."
-					? jQuery.sap.getObject(sSegment.slice(1), undefined, mParameters.scope)
-					: jQuery.sap.getObject(sSegment);
+					? ObjectPath.get(sSegment.slice(1), mParameters.scope)
+					: mParameters && ObjectPath.get(sSegment, mParameters.scope)
+						|| ObjectPath.get(sSegment);
 				if (typeof fnAnnotation !== "function") {
 					// Note: "varargs" syntax does not help because Array#join ignores undefined
 					return log(WARNING, sSegment, " is not a function but: " + fnAnnotation);
@@ -914,6 +941,7 @@ sap.ui.define([
 
 				try {
 					vResult = fnAnnotation(vResult, {
+						$$valueAsPromise : mParameters && mParameters.$$valueAsPromise,
 						context : new BaseContext(that, sPath),
 						schemaChildName : sSchemaChildName
 					});
@@ -967,13 +995,13 @@ sap.ui.define([
 			function log(iLevel) {
 				var sLocation;
 
-				if (jQuery.sap.log.isLoggable(iLevel, sODataMetaModel)) {
+				if (Log.isLoggable(iLevel, sODataMetaModel)) {
 					sLocation = Array.isArray(vLocation)
 						? vLocation.join("/")
 						: vLocation;
-					jQuery.sap.log[iLevel === DEBUG ? "debug" : "warning"](
+					Log[iLevel === DEBUG ? "debug" : "warning"](
 						Array.prototype.slice.call(arguments, 1).join("")
-						+ (sLocation ? " at /" + sLocation : ""),
+							+ (sLocation ? " at /" + sLocation : ""),
 						sResolvedPath, sODataMetaModel);
 				}
 				if (iLevel === WARNING) {
@@ -1250,7 +1278,7 @@ sap.ui.define([
 		var oMetaContext = this.getMetaContext(sPath),
 			that = this;
 
-		if (jQuery.sap.endsWith(sPath, "/$count")) {
+		if (sPath.endsWith("/$count")) {
 			oCountType = oCountType || new Int64();
 			return SyncPromise.resolve(oCountType);
 		}
@@ -1270,8 +1298,8 @@ sap.ui.define([
 			}
 
 			if (!oProperty) {
-				jQuery.sap.log.warning("No metadata for path '" + sPath + "', using " + sTypeName,
-					undefined, sODataMetaModel);
+				Log.warning("No metadata for path '" + sPath + "', using " + sTypeName, undefined,
+					sODataMetaModel);
 				return oRawType;
 			}
 
@@ -1281,8 +1309,8 @@ sap.ui.define([
 			}
 
 			if (oProperty.$isCollection) {
-				jQuery.sap.log.warning("Unsupported collection type, using " + sTypeName,
-					sPath, sODataMetaModel);
+				Log.warning("Unsupported collection type, using " + sTypeName, sPath,
+					sODataMetaModel);
 			} else {
 				oTypeInfo = mUi5TypeForEdmType[oProperty.$Type];
 				if (oTypeInfo) {
@@ -1298,8 +1326,8 @@ sap.ui.define([
 						setConstraint("nullable", false);
 					}
 				} else {
-					jQuery.sap.log.warning("Unsupported type '" + oProperty.$Type + "', using "
-						+ sTypeName, sPath, sODataMetaModel);
+					Log.warning("Unsupported type '" + oProperty.$Type + "', using " + sTypeName,
+						sPath, sODataMetaModel);
 				}
 			}
 
@@ -1930,13 +1958,16 @@ sap.ui.define([
 	 * Annotations starting with "@@", for example
 	 * "@@sap.ui.model.odata.v4.AnnotationHelper.isMultiple" or "@@.AH.isMultiple" or
 	 * "@@.isMultiple", represent computed annotations. Their name without the "@@" prefix must
-	 * refer to a function either in the global namespace (in case of an absolute name) or in
-	 * <code>mParameters.scope</code> (in case of a relative name starting with a dot, which is
-	 * stripped before lookup; see the <code>&lt;template:alias></code> instruction for XML
-	 * Templating). This function is called with the current object (or primitive value) and
-	 * additional details and returns the result of this {@link #requestObject} call. The additional
-	 * details are given as an object with the following properties:
+	 * refer to a function in <code>mParameters.scope</code> in case of a relative name starting
+	 * with a dot, which is stripped before lookup; see the <code>&lt;template:alias></code>
+	 * instruction for XML Templating. In case of an absolute name, it is searched in
+	 * <code>mParameters.scope</code> first and then in the global namespace. This function is
+	 * called with the current object (or primitive value) and additional details and returns the
+	 * result of this {@link #requestObject} call. The additional details are given as an object
+	 * with the following properties:
 	 * <ul>
+	 * <li><code>{boolean} $$valueAsPromise</code> Whether the computed annotation may return a
+	 *   <code>Promise</code> resolving with its value (since 1.57.0)
 	 * <li><code>{@link sap.ui.model.Context} context</code> Points to the current object
 	 * <li><code>{string} schemaChildName</code> The qualified name of the schema child where the
 	 *   computed annotation has been found

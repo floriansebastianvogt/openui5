@@ -84,7 +84,9 @@
 		beforeEach : function() {
 
 			// log spy
-			this.oLogSpy = sinon.spy(jQuery.sap.log, "warning");
+			var Log = sap.ui.require("sap/base/Log");
+			assert.ok(Log, "Log module should be available");
+			this.oLogSpy = sinon.spy(Log, "warning");
 
 		},
 
@@ -465,7 +467,7 @@
 
 	QUnit.module("Component Usage", {
 
-		beforeEach : function() {
+		beforeEach : function(assert) {
 
 			// define the manifest for the Component test
 			var oManifest = this.oManifest = {
@@ -524,7 +526,9 @@
 
 
 			// log spy
-			this.oLogSpy = sinon.spy(jQuery.sap.log, "error");
+			var Log = sap.ui.require("sap/base/Log");
+			assert.ok(Log, "Log module should be available");
+			this.oLogSpy = sinon.spy(Log, "error");
 
 			// register the Service Factories before component creation
 			sap.ui.core.service.ServiceFactoryRegistry.register("my.ServiceFactoryAlias", new my.ServiceFactory());
@@ -587,6 +591,52 @@
 					done();
 				}).catch(function(oError) {
 					assert.ok(false, "getService must not be failing!");
+					done();
+				});
+
+				var oServiceInstance = oComponent._mServices["MyServiceAlias"].instance;
+				assert.ok(oServiceInstance._bInitialized, "Service is initialized properly!");
+				oComponent.destroy();
+				assert.ok(oServiceInstance._bTerminated, "Service is terminated properly!");
+				assert.notOk(oComponent._mServices, "Local Service instance registry is deleted!");
+
+			}).catch(function(oError) {
+				assert.ok(false, "getService must not be failing!");
+				done();
+
+			});
+
+		});
+
+	});
+
+	/*
+	 * This test checks that the Promise rejects if no service is configured
+	 * Component Service API.
+	 */
+	QUnit.test("Retrieve Service from existing Service Factory", function(assert) {
+
+		var oComponent = this.oComponent;
+
+		var done = assert.async();
+
+		sap.ui.require([
+			"sap/ui/core/service/Service",
+			"my/Service"
+		], function(Service, MyService) {
+
+			oComponent.getService("MyServiceAlias").then(function(oService) {
+
+				assert.notOk(oService instanceof Service, "Service Interface must not be type sap.ui.core.service.Service");
+				assert.equal(typeof oService.destroy, "undefined", "Service Interface has no destroy function");
+				assert.equal(typeof oService.doSomething, "function", "Service Interface has doSomething function");
+				assert.equal(typeof oService._doSomething, "undefined", "Service Interface has no _doSomething function");
+
+				oComponent.getService("MyNonExistingAlias").then(function(oSameService) {
+					assert.ok(false, "Service not configured - should not happen");
+					done();
+				}).catch(function(oError) {
+					assert.ok(oError, "getService fails as service is not configured!");
 					done();
 				});
 

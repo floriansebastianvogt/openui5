@@ -125,7 +125,7 @@ sap.ui.define([
 	 * @returns {Object} the resource bundle object
 	 */
 	ObjectPageSubSection._getLibraryResourceBundle = function() {
-		return library.i18nModel.getResourceBundle();
+		return sap.ui.getCore().getLibraryResourceBundle("sap.uxap");
 	};
 
 	/**
@@ -833,7 +833,8 @@ sap.ui.define([
 		if (!this._oSeeMoreButton) {
 			this._oSeeMoreButton = new Button(this.getId() + "--seeMore", {
 				type: ButtonType.Transparent,
-				iconFirst: false
+				iconFirst: false,
+				ariaLabelledBy: this.getId()
 			}).addStyleClass("sapUxAPSubSectionSeeMoreButton").attachPress(this._seeMoreLessControlPressHandler, this);
 		}
 

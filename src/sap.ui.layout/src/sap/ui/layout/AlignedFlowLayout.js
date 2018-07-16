@@ -3,13 +3,13 @@
  */
 
 sap.ui.define([
-    'jquery.sap.global',
-    'sap/ui/core/Control',
-    './library',
-    'sap/ui/core/ResizeHandler',
-    "./AlignedFlowLayoutRenderer"
+	"sap/ui/core/Control",
+	"./library",
+	"sap/ui/core/ResizeHandler",
+	"./AlignedFlowLayoutRenderer",
+	"sap/ui/dom/units/Rem"
 ],
-	function(jQuery, Control, library, ResizeHandler, AlignedFlowLayoutRenderer) {
+	function(Control, library, ResizeHandler, AlignedFlowLayoutRenderer, Rem) {
 		"use strict";
 
 		/**
@@ -153,15 +153,15 @@ sap.ui.define([
 				bEnoughSpaceForEndItem = true;
 
 			oEndItemDomRef = oEndItemDomRef || this.getDomRef("endItem");
+			var oLastItemDomRef = this.getLastItemDomRef();
 
-			if (oEndItemDomRef) {
+			if (oEndItemDomRef && oLastItemDomRef) {
 				var mLastSpacerStyle = oDomRef.lastElementChild.style;
 				mLastSpacerStyle.height = "";
 				mLastSpacerStyle.display = "";
 				oDomRef.classList.remove(CSS_CLASS_ONE_LINE);
 
-				var oLastItemDomRef = this.getLastItemDomRef(),
-					iEndItemHeight = oEndItemDomRef.offsetHeight,
+				var iEndItemHeight = oEndItemDomRef.offsetHeight,
 					iEndItemWidth = oEndItemDomRef.offsetWidth,
 					iLastItemOffsetLeft = oLastItemDomRef.offsetLeft,
 					iAvailableWidthForEndItem;
@@ -293,7 +293,7 @@ sap.ui.define([
 
 			// the CSS unit of the minItemWidth control property is in rem
 			if (sMinItemWidth.lastIndexOf("rem") !== -1) {
-				fMinItemWidth = jQuery.sap.remToPx(sMinItemWidth);
+				fMinItemWidth = Rem.toPx(sMinItemWidth);
 
 			// the CSS unit of the minItemWidth control property is in px
 			} else if (sMinItemWidth.lastIndexOf("px") !== -1) {
@@ -304,8 +304,9 @@ sap.ui.define([
 
 			if (fMinItemWidth) {
 
-				// we do not need more spacers than (documentElement.clientWidth / minItemWidth)
-				iSpacers = Math.abs(document.documentElement.clientWidth / fMinItemWidth);
+				// we do not need more spacers than (iAvailableWidth / minItemWidth)
+				var iAvailableWidth = Math.max(document.documentElement.clientWidth, window.screen.width);
+				iSpacers = Math.abs(iAvailableWidth / fMinItemWidth);
 			}
 
 			// we do not need more spacers than items

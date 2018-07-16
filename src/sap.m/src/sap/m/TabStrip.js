@@ -3,7 +3,6 @@
  */
 
 sap.ui.define([
-	'jquery.sap.global',
 	'sap/ui/core/Control',
 	'sap/ui/core/IconPool',
 	'sap/ui/core/delegate/ItemNavigation',
@@ -20,10 +19,12 @@ sap.ui.define([
 	'sap/ui/core/Icon',
 	'sap/m/SelectRenderer',
 	'sap/m/SelectListRenderer',
-	'./TabStripRenderer'
+	'./TabStripRenderer',
+	"sap/base/Log",
+	"sap/ui/dom/jquery/control", // jQuery Plugin "control"
+	"sap/ui/dom/jquery/scrollLeftRTL" // jQuery Plugin "scrollLeftRTL"
 ],
 function(
-	jQuery,
 	Control,
 	IconPool,
 	ItemNavigation,
@@ -40,7 +41,8 @@ function(
 	Icon,
 	SelectRenderer,
 	SelectListRenderer,
-	TabStripRenderer
+	TabStripRenderer,
+	Log
 	) {
 		"use strict";
 
@@ -524,10 +526,10 @@ function(
 		 */
 		TabStrip.prototype._scroll = function(iDelta, iDuration) {
 			var iScrollLeft = this.getDomRef("tabsContainer").scrollLeft,
-				bIE_Edge = Device.browser.internet_explorer || Device.browser.edge,
+				bIE_Edge = Device.browser.internet_explorer || Device.browser.edge,// TODO remove after 1.62 version
 				iScrollTarget;
 
-			if (this._bRtl && !bIE_Edge) {
+			if (this._bRtl && !bIE_Edge) {// TODO remove after 1.62 version
 				iScrollTarget = iScrollLeft - iDelta;
 
 				if (Device.browser.firefox) {
@@ -685,7 +687,7 @@ function(
 					this.fireItemPress({item: oNextItem});
 				}
 				// Focus (force to wait until invalidated)
-				jQuery.sap.delayedCall(0, this, fnFocusCallback);
+				setTimeout(fnFocusCallback.bind(this), 0);
 		};
 
 		/**
@@ -926,7 +928,7 @@ function(
 			/* this method is handling the close pressed event on all item instances (TabStrip and the
 			 * CustomSelect copy), so when it's handling the press on the CustomSelect item, it needs to determine the TabStrip item out of the event and vice-versa */
 			if (!(oItem instanceof TabStripItem)) {
-				jQuery.sap.log.error('Expecting instance of a TabStripSelectItem, given: ', oItem);
+				Log.error('Expecting instance of a TabStripSelectItem, given: ', oItem);
 			}
 			if (oItem.getId().indexOf(TabStrip.SELECT_ITEMS_ID_SUFFIX) !== -1) {
 				oTabStripItem = this._findTabStripItemFromSelectItem(oItem);
@@ -1051,7 +1053,7 @@ function(
 			var oSelectItem;
 
 			if (!oTabStripItem && !(oTabStripItem instanceof sap.m.TabContainerItem)) {
-				jQuery.sap.log.error('Expecting instance of "sap.m.TabContainerItem": instead of ' + oTabStripItem + ' given.');
+				Log.error('Expecting instance of "sap.m.TabContainerItem": instead of ' + oTabStripItem + ' given.');
 				return;
 			}
 

@@ -4,8 +4,43 @@
 
 // Provides control sap.m.P13nConditionPanel.
 sap.ui.define([
-	'jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/format/DateFormat', 'sap/ui/core/format/NumberFormat', 'sap/ui/core/IconPool', 'sap/ui/Device', 'sap/ui/core/InvisibleText', 'sap/ui/core/library', 'sap/ui/core/ResizeHandler', 'sap/ui/core/Item'
-], function(jQuery, library, Control, DateFormat, NumberFormat, IconPool, Device, InvisibleText, coreLibrary, ResizeHandler, Item) {
+	'./library',
+	'sap/ui/core/library',
+	'sap/ui/core/Control',
+	'sap/ui/core/format/DateFormat',
+	'sap/ui/core/format/NumberFormat',
+	'sap/ui/core/IconPool',
+	'sap/ui/Device',
+	'sap/ui/core/InvisibleText',
+	'sap/ui/core/ResizeHandler',
+	'sap/ui/core/Item',
+	'sap/ui/core/ListItem',
+	'sap/ui/model/odata/type/Boolean',
+	'sap/ui/model/type/String',
+	'sap/ui/model/odata/type/String',
+	'sap/ui/model/type/Date',
+	'sap/ui/model/type/Time',
+	'sap/ui/model/odata/type/DateTime',
+	'sap/ui/model/odata/type/Double',
+	'./Button',
+	'./OverflowToolbar',
+	'./OverflowToolbarLayoutData',
+	'./ToolbarSpacer',
+	'./Text',
+	'./SearchField',
+	'./CheckBox',
+	'./ComboBox',
+	'./Select',
+	'./Label',
+	'./Input',
+	'./DatePicker',
+	'./TimePicker',
+	'./DateTimePicker',
+	"sap/base/Log"
+], function(library, coreLibrary, Control, DateFormat, NumberFormat, IconPool, Device, InvisibleText, ResizeHandler, Item,
+	ListItem, BooleanOdataType, StringType, StringOdataType, DateType, TimeType, DateTimeOdataType, DoubleOdataType, Button,
+	OverflowToolbar, OverflowToolbarLayoutData, ToolbarSpacer, Text, SearchField, CheckBox, ComboBox, Select, Label, Input,
+	DatePicker, TimePicker, DateTimePicker, Log) {
 	"use strict";
 
 	// shortcut for sap.ui.core.ValueState
@@ -25,6 +60,12 @@ sap.ui.define([
 
 	// lazy dependency to sap.ui.layout.Grid
 	var Grid;
+	// lazy dependency to sap.ui.layout.GridData
+	var GridData;
+	// lazy dependency to sap.ui.layout.HorizontalLayout
+	var HorizontalLayout;
+	// lazy dependency to sap.ui.comp.odata.type.StringDate
+	var StringDateType;
 
 	/**
 	 * Constructor for a new P13nConditionPanel.
@@ -216,7 +257,7 @@ sap.ui.define([
 	 */
 	P13nConditionPanel.prototype.setConditions = function(aConditions) {
 		if (!aConditions) {
-			jQuery.sap.log.error("sap.m.P13nConditionPanel : aCondition is not defined");
+			Log.error("sap.m.P13nConditionPanel : aCondition is not defined");
 		}
 
 		if (this._bIgnoreSetConditions) {
@@ -360,7 +401,7 @@ sap.ui.define([
 						"operation": oCondition.operation,
 						"keyField": oCondition.keyField,
 						"value1": oCondition.value1,
-						"value2": oCondition.operation === sap.m.P13nConditionOperation.BT ? oCondition.value2 : null,
+						"value2": oCondition.operation === P13nConditionOperation.BT ? oCondition.value2 : null,
 						"showIfGrouped": oCondition.showIfGrouped
 					});
 
@@ -474,32 +515,35 @@ sap.ui.define([
 			switch (oKeyField.type) {
 				case "boolean":
 					//TODO in case the model is not an ODataModel we should use the sap.ui.model.type.Boolean
-					oKeyField.typeInstance = new sap.ui.model.odata.type.Boolean();
+					oKeyField.typeInstance = new BooleanOdataType();
 					//oKeyField.typeInstance = new sap.ui.model.type.Boolean();
 					break;
 				case "numc":
 					//formatSettings: {isDigitSequence: true, maxLength: 10},
 					if (!!oKeyField.formatSettings.isDigitSequence) {
-						jQuery.sap.log.error("sap.m.P13nConditionPanel", "NUMC type support requires isDigitSequence==true!");
+						Log.error("sap.m.P13nConditionPanel", "NUMC type support requires isDigitSequence==true!");
 					}
 					if (!!oKeyField.formatSettings.maxLength) {
-						jQuery.sap.log.error("sap.m.P13nConditionPanel", "NUMC type suppport requires maxLength!");
+						Log.error("sap.m.P13nConditionPanel", "NUMC type suppport requires maxLength!");
 					}
-					oKeyField.typeInstance = new sap.ui.model.odata.type.String({}, oKeyField.formatSettings);
+					oKeyField.typeInstance = new StringOdataType({}, oKeyField.formatSettings);
 					break;
 				case "date":
 					//TODO we should use the none odata date type, otherwise the returned oValue1 is not a date object
-					oKeyField.typeInstance = new sap.ui.model.type.Date(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }), {});
+					oKeyField.typeInstance = new DateType(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }), {});
 					break;
 				case "time":
 					//TODO we should use the none odata date type, otherwise the returned oValue1 is not a date object
-					oKeyField.typeInstance = new sap.ui.model.type.Time(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }), {});
+					oKeyField.typeInstance = new TimeType(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }), {});
 					break;
 				case "datetime":
-					oKeyField.typeInstance = new sap.ui.model.odata.type.DateTime(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }), {});
+					oKeyField.typeInstance = new DateTimeOdataType(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }), {});
 					break;
 				case "stringdate":
-					oKeyField.typeInstance = new sap.ui.comp.odata.type.StringDate(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }));
+					// TODO: Do we really need the COMP library here???
+					sap.ui.getCore().loadLibrary("sap.ui.comp");
+					StringDateType = StringDateType || sap.ui.requireSync("sap/ui/comp/odata/type/StringDate");
+					oKeyField.typeInstance = new StringDateType(jQuery.extend({}, oKeyField.formatSettings, { strictParsing: true }));
 					break;
 				case "numeric":
 					var oContraints;
@@ -512,14 +556,14 @@ sap.ui.define([
 							oContraints["maxFractionDigits"] = parseInt(oKeyField.scale, 10);
 						}
 					}
-					oKeyField.typeInstance = new sap.ui.model.odata.type.Double(oContraints);
+					oKeyField.typeInstance = new DoubleOdataType(oContraints);
 					break;
 				default:
 					var oFormatOptions = oKeyField.formatSettings;
 					if (oKeyField.maxLength) {
 						oFormatOptions = jQuery.extend({}, oFormatOptions, { maxLength: oKeyField.maxLength });
 					}
-					oKeyField.typeInstance = new sap.ui.model.type.String({}, oFormatOptions);
+					oKeyField.typeInstance = new StringType({}, oFormatOptions);
 					break;
 			}
 		}
@@ -644,6 +688,8 @@ sap.ui.define([
 		// load the required layout lib
 		sap.ui.getCore().loadLibrary("sap.ui.layout");
 		Grid = Grid || sap.ui.requireSync("sap/ui/layout/Grid");
+		GridData = GridData || sap.ui.requireSync("sap/ui/layout/GridData");
+		HorizontalLayout = HorizontalLayout || sap.ui.requireSync("sap/ui/layout/HorizontalLayout");
 
 		this.addStyleClass("sapMConditionPanel");
 
@@ -779,7 +825,7 @@ sap.ui.define([
 
 		var that = this;
 
-		this._oPrevButton = new sap.m.Button({
+		this._oPrevButton = new Button({
 			icon: IconPool.getIconURI("navigation-left-arrow"),
 			//tooltip: "Show Previous",
 			tooltip: this._oRb.getText("WIZARD_FINISH"), //TODO create new resoucre
@@ -789,12 +835,12 @@ sap.ui.define([
 				that._clearConditions();
 				that._fillConditions();
 			},
-			layoutData: new sap.m.OverflowToolbarLayoutData({
+			layoutData: new OverflowToolbarLayoutData({
 				priority: OverflowToolbarPriority.NeverOverflow
 			})
 		});
 
-		this._oNextButton = new sap.m.Button({
+		this._oNextButton = new Button({
 			icon: IconPool.getIconURI("navigation-right-arrow"),
 			//tooltip: "Show Next",
 			tooltip: this._oRb.getText("WIZARD_NEXT"), //TODO create new resoucre
@@ -804,12 +850,12 @@ sap.ui.define([
 				that._clearConditions();
 				that._fillConditions();
 			},
-			layoutData: new sap.m.OverflowToolbarLayoutData({
+			layoutData: new OverflowToolbarLayoutData({
 				priority: OverflowToolbarPriority.NeverOverflow
 			})
 		});
 
-		this._oRemoveAllButton = new sap.m.Button({
+		this._oRemoveAllButton = new Button({
 			text: this._oRb.getText("CONDITIONPANEL_REMOVE_ALL"), // "Remove All",
 			//icon: sap.ui.core.IconPool.getIconURI("sys-cancel"),
 			//tooltip: "Remove All",
@@ -830,12 +876,12 @@ sap.ui.define([
 				this._iFirstConditionIndex = 0;
 				that.removeAllConditions();
 			},
-			layoutData: new sap.m.OverflowToolbarLayoutData({
+			layoutData: new OverflowToolbarLayoutData({
 				priority: OverflowToolbarPriority.Low
 			})
 		});
 
-		this._oAddButton = new sap.m.Button({
+		this._oAddButton = new Button({
 			icon: IconPool.getIconURI("add"),
 			tooltip: this._oRb.getText("CONDITIONPANEL_ADD" + (this._sAddRemoveIconTooltipKey ? "_" + this._sAddRemoveIconTooltipKey : "") + "_TOOLTIP"),
 			visible: true,
@@ -850,38 +896,38 @@ sap.ui.define([
 
 				that._updatePaginatorToolbar();
 			},
-			layoutData: new sap.m.OverflowToolbarLayoutData({
+			layoutData: new OverflowToolbarLayoutData({
 				priority: OverflowToolbarPriority.Low
 			})
 		});
 
-		this._oHeaderText = new sap.m.Text({
+		this._oHeaderText = new Text({
 			wrapping: false,
-			layoutData: new sap.m.OverflowToolbarLayoutData({
+			layoutData: new OverflowToolbarLayoutData({
 				priority: OverflowToolbarPriority.NeverOverflow
 			})
 		});
 
-		this._oPageText = new sap.m.Text({
+		this._oPageText = new Text({
 			wrapping: false,
 			textAlign: TextAlign.Center,
-			layoutData: new sap.m.OverflowToolbarLayoutData({
+			layoutData: new OverflowToolbarLayoutData({
 				priority: OverflowToolbarPriority.NeverOverflow
 			})
 		});
 
-		this._oFilterField = new sap.m.SearchField({
+		this._oFilterField = new SearchField({
 			width: "12rem",
-			layoutData: new sap.m.OverflowToolbarLayoutData({
+			layoutData: new OverflowToolbarLayoutData({
 				priority: OverflowToolbarPriority.High
 			})
 		});
 
-		this._oPaginatorToolbar = new sap.m.OverflowToolbar({
+		this._oPaginatorToolbar = new OverflowToolbar({
 			height: "3rem",
 			design: ToolbarDesign.Transparent,
 			content: [
-				this._oHeaderText, new sap.m.ToolbarSpacer(), this._oFilterField, this._oPrevButton, this._oPageText, this._oNextButton, this._oRemoveAllButton, this._oAddButton
+				this._oHeaderText, new ToolbarSpacer(), this._oFilterField, this._oPrevButton, this._oPageText, this._oNextButton, this._oRemoveAllButton, this._oAddButton
 			]
 		});
 	};
@@ -1186,10 +1232,10 @@ sap.ui.define([
 				case "CheckBox":
 					// the CheckBox is not visible and only used internal to validate if a condition is
 					// filled correct.
-					oControl = new sap.m.CheckBox({
+					oControl = new CheckBox({
 						enabled: false,
 						visible: false,
-						layoutData: new sap.ui.layout.GridData({
+						layoutData: new GridData({
 							span: field["Span" + this._sConditionType]
 						})
 					});
@@ -1212,7 +1258,7 @@ sap.ui.define([
 
 				case "ComboBox":
 					if (field["ID"] === "keyField") {
-						oControl = new sap.m.ComboBox({ // before we used the new sap.m.Select control
+						oControl = new ComboBox({ // before we used the new sap.m.Select control
 							width: "100%",
 							ariaLabelledBy: this._oInvisibleTextField
 						});
@@ -1235,7 +1281,7 @@ sap.ui.define([
 							}
 						};
 
-						oControl.setLayoutData(new sap.ui.layout.GridData({
+						oControl.setLayoutData(new GridData({
 							span: field["Span" + this._sConditionType]
 						}));
 
@@ -1312,10 +1358,10 @@ sap.ui.define([
 					}
 
 					if (field["ID"] === "operation") {
-						oControl = new sap.m.Select({
+						oControl = new Select({
 							width: "100%",
 							ariaLabelledBy: this._oInvisibleTextOperator,
-							layoutData: new sap.ui.layout.GridData({
+							layoutData: new GridData({
 								span: field["Span" + this._sConditionType]
 							})
 						});
@@ -1376,7 +1422,7 @@ sap.ui.define([
 					if (oConditionGridData && oConditionGridData[field["ID"]] !== undefined) {
 						var vValue = oConditionGridData[field["ID"]];
 
-						if (oControl instanceof sap.m.Select) {
+						if (oControl instanceof Select) {
 							if (typeof vValue === "boolean") {
 								oControl.setSelectedIndex(vValue ? 2 : 1);
 							}
@@ -1396,10 +1442,10 @@ sap.ui.define([
 					break;
 
 				case "Label":
-					oControl = new sap.m.Label({
+					oControl = new Label({
 						text: field["Text"] + ":",
 						visible: this.getShowLabel(),
-						layoutData: new sap.ui.layout.GridData({
+						layoutData: new GridData({
 							span: field["Span" + this._sConditionType]
 						})
 					}).addStyleClass("conditionLabel");
@@ -1414,8 +1460,8 @@ sap.ui.define([
 		/* eslint-enable no-loop-func */
 
 		// create a hLayout container for the remove and add buttons
-		oButtonContainer = new sap.ui.layout.HorizontalLayout({
-			layoutData: new sap.ui.layout.GridData({
+		oButtonContainer = new HorizontalLayout({
+			layoutData: new GridData({
 				span: this.getLayoutMode() === "Desktop" ? "L2 M2 S2" : this._oButtonGroupSpan["Span" + this._sConditionType]
 			})
 		}).addStyleClass("floatRight");
@@ -1423,14 +1469,14 @@ sap.ui.define([
 		oConditionGrid["ButtonContainer"] = oButtonContainer;
 
 		// create "Remove button"
-		var oRemoveControl = new sap.m.Button({
+		var oRemoveControl = new Button({
 			type: ButtonType.Transparent,
 			icon: IconPool.getIconURI("sys-cancel"),
 			tooltip: this._oRb.getText("CONDITIONPANEL_REMOVE" + (this._sAddRemoveIconTooltipKey ? "_" + this._sAddRemoveIconTooltipKey : "") + "_TOOLTIP"),
 			press: function() {
 				that._handleRemoveCondition(this.oTargetGrid, oConditionGrid);
 			},
-			layoutData: new sap.ui.layout.GridData({
+			layoutData: new GridData({
 				span: this.getLayoutMode() === "Desktop" ? "L1 M1 S1" : "L1 M2 S2"
 			})
 		});
@@ -1441,14 +1487,14 @@ sap.ui.define([
 		oConditionGrid["remove"] = oRemoveControl;
 
 		// create "Add button"
-		var oAddControl = new sap.m.Button({
+		var oAddControl = new Button({
 			type: ButtonType.Transparent,
 			icon: IconPool.getIconURI("add"),
 			tooltip: this._oRb.getText("CONDITIONPANEL_ADD" + (this._sAddRemoveIconTooltipKey ? "_" + this._sAddRemoveIconTooltipKey : "") + "_TOOLTIP"),
 			press: function() {
 				that._handleAddCondition(this.oTargetGrid, oConditionGrid);
 			},
-			layoutData: new sap.ui.layout.GridData({
+			layoutData: new GridData({
 				span: this.getLayoutMode() === "Desktop" ? "L1 M1 S1" : "L1 M10 S10"
 			})
 		});
@@ -1586,7 +1632,7 @@ sap.ui.define([
 				that._validateAndFormatFieldValue(oEvent);
 				that._changeField(oConditionGrid);
 			},
-			layoutData: new sap.ui.layout.GridData({
+			layoutData: new GridData({
 				span: oFieldInfo["Span" + this._sConditionType]
 			})
 		};
@@ -1598,7 +1644,7 @@ sap.ui.define([
 			// use the DatePicker when type is sap.ui.model.odata.type.DateTime and displayFormat = Date
 			if (sCtrlType === "DateTimePicker" && oType.getMetadata().getName() === "sap.ui.model.odata.type.DateTime") {
 				if (!(oType.oConstraints && oType.oConstraints.isDateOnly)) {
-					jQuery.sap.log.error("sap.m.P13nConditionPanel", "sap.ui.model.odata.type.DateTime without displayFormat = Date is not supported!");
+					Log.error("sap.m.P13nConditionPanel", "sap.ui.model.odata.type.DateTime without displayFormat = Date is not supported!");
 				}
 				sCtrlType = "DatePicker";
 			}
@@ -1624,29 +1670,29 @@ sap.ui.define([
 					change: function() {
 						that._changeField(oConditionGrid);
 					},
-					layoutData: new sap.ui.layout.GridData({
+					layoutData: new GridData({
 						span: oFieldInfo["Span" + this._sConditionType]
 					})
 				};
-				oControl = new sap.m.Select(params);
+				oControl = new Select(params);
 			} else if (sCtrlType == "TimePicker") {
 				//TODO TimerPicker does not support displayFormat
 				//if (oType.oFormatOptions && oType.oFormatOptions.style) {
 				//	params.displayFormat = oType.oFormatOptions.style;
 				//}
-				oControl = new sap.m.TimePicker(params);
+				oControl = new TimePicker(params);
 			} else if (sCtrlType == "DateTimePicker") {
 				if (oType.oFormatOptions && oType.oFormatOptions.style) {
 					params.displayFormat = oType.oFormatOptions.style;
 				}
-				oControl = new sap.m.DateTimePicker(params);
+				oControl = new DateTimePicker(params);
 			} else if (sCtrlType == "DatePicker") {
 				if (oType.oFormatOptions && oType.oFormatOptions.style) {
 					params.displayFormat = oType.oFormatOptions.style;
 				}
-				oControl = new sap.m.DatePicker(params);
+				oControl = new DatePicker(params);
 			} else {
-				oControl = new sap.m.Input(params);
+				oControl = new Input(params);
 
 				//TODO oType should only be set when type is string!
 				if (this._fSuggestCallback) {
@@ -1663,7 +1709,7 @@ sap.ui.define([
 		} else {
 			// for a new added dummy row, which does not have a oCurrentKeyField, we have to create a dummy input field.
 			oConditionGrid.oType = null;
-			oControl = new sap.m.Input(params);
+			oControl = new Input(params);
 		}
 
 		if (sCtrlType !== "boolean" && sCtrlType !== "enum" && oControl) {
@@ -1762,11 +1808,11 @@ sap.ui.define([
 		oCtrl.destroyItems();
 		for (var iOperation in aOperations) {
 			var sText = this._oRb.getText("CONDITIONPANEL_OPTION" + sType + aOperations[iOperation]);
-			if (jQuery.sap.startsWith(sText, "CONDITIONPANEL_OPTION")) {
+			if (sText.startsWith("CONDITIONPANEL_OPTION")) {
 				// when for the specified type the resource does not exist use the normal string resource text
 				sText = this._oRb.getText("CONDITIONPANEL_OPTION" + aOperations[iOperation]);
 			}
-			oCtrl.addItem(new sap.ui.core.ListItem({
+			oCtrl.addItem(new ListItem({
 				key: aOperations[iOperation],
 				text: sText,
 				tooltip: sText
@@ -1785,7 +1831,7 @@ sap.ui.define([
 		oCtrl.destroyItems();
 		for (var iItem in aItems) {
 			var oItem = aItems[iItem];
-			oCtrl.addItem(new sap.ui.core.ListItem({
+			oCtrl.addItem(new ListItem({
 				key: oItem.key,
 				text: oItem.text,
 				tooltip: oItem.tooltip ? oItem.tooltip : oItem.text
@@ -1881,11 +1927,7 @@ sap.ui.define([
 			oCtrl = this._createValueField(oCurrentKeyField, fieldInfo, oConditionGrid);
 			oConditionGrid[fieldInfo["ID"]] = oCtrl;
 
-			// we have to insert the control into the content with rerendering (bSuppressInvalidate=false) the UI,
-			// otherwise in some use cases the "between" value fields will not be rendered.
-			// This additional rerender might trigger some problems for screenreader.
-			oConditionGrid.insertContent(oCtrl, ctrlIndex === -1 ? 0 : ctrlIndex);
-			//oConditionGrid.insertAggregation("content", oCtrl, ctrlIndex, true);
+			oConditionGrid.insertContent(oCtrl, ctrlIndex === -1 ? oConditionGrid.indexOfContent(oConditionGrid.operation) + 1 : ctrlIndex);
 
 			var oValue, sValue;
 			if (oConditionGrid.oType && sOldValue) {
@@ -1932,7 +1974,7 @@ sap.ui.define([
 		var aOperations = this._oTypeOperations["default"];
 		var oCurrentSelectedItem = oOperation.getSelectedItem();
 
-		if (oKeyField && !this.getExclude()) {
+		if (oKeyField) {
 			if (oKeyField.type && oKeyField.type !== "" && this._oTypeOperations[oKeyField.type]) {
 				sType = oKeyField.type;
 				aOperations = this._oTypeOperations[sType];
@@ -1952,10 +1994,10 @@ sap.ui.define([
 		}
 
 		this._sConditionType = "Filter";
-		if (aOperations[0] === sap.m.P13nConditionOperation.Ascending || aOperations[0] === sap.m.P13nConditionOperation.Descending) {
+		if (aOperations[0] === P13nConditionOperation.Ascending || aOperations[0] === P13nConditionOperation.Descending) {
 			this._sConditionType = "Sort";
 		}
-		if (aOperations[0] === sap.m.P13nConditionOperation.GroupAscending || aOperations[0] === sap.m.P13nConditionOperation.GroupDescending) {
+		if (aOperations[0] === P13nConditionOperation.GroupAscending || aOperations[0] === P13nConditionOperation.GroupDescending) {
 			this._sConditionType = "Group";
 		}
 
@@ -2006,7 +2048,7 @@ sap.ui.define([
 				for (j; j < aItems.length; j++) {
 					var oItem = aItems[j];
 					if (oItem.key == null || oItem.key === "" || !oUsedItems[oItem.key] || oItem.key === sOldKey) {
-						oKeyField.addItem(new sap.ui.core.ListItem({
+						oKeyField.addItem(new ListItem({
 							key: oItem.key,
 							text: oItem.text,
 							tooltip: oItem.tooltip ? oItem.tooltip : oItem.text
@@ -2065,7 +2107,7 @@ sap.ui.define([
 			return;
 		}
 
-		if (sOperation === sap.m.P13nConditionOperation.BT) {
+		if (sOperation === P13nConditionOperation.BT) {
 			// for the "between" operation we enable both fields
 			if (oValue1.setPlaceholder && oValue1.getPlaceholder() !== this._sFromLabelText) {
 				oValue1.setPlaceholder(this._sFromLabelText);
@@ -2085,7 +2127,7 @@ sap.ui.define([
 				oConditionGrid.insertContent(oValue2, oConditionGrid.getContent().length - 1);
 			}
 		} else {
-			if (sOperation === sap.m.P13nConditionOperation.GroupAscending || sOperation === sap.m.P13nConditionOperation.GroupDescending) {
+			if (sOperation === P13nConditionOperation.GroupAscending || sOperation === P13nConditionOperation.GroupDescending) {
 
 				// update visible of fields
 				if (oValue1.getVisible()) {
@@ -2103,7 +2145,7 @@ sap.ui.define([
 				}
 				oShowIfGroupedvalue.setVisible(this._getMaxConditionsAsNumber() != 1);
 			} else {
-				if (sOperation === sap.m.P13nConditionOperation.NotEmpty || sOperation === sap.m.P13nConditionOperation.Empty || sOperation === sap.m.P13nConditionOperation.Initial || sOperation === sap.m.P13nConditionOperation.Ascending || sOperation === sap.m.P13nConditionOperation.Descending || sOperation === sap.m.P13nConditionOperation.Total || sOperation === sap.m.P13nConditionOperation.Average || sOperation === sap.m.P13nConditionOperation.Minimum || sOperation === sap.m.P13nConditionOperation.Maximum) {
+				if (sOperation === P13nConditionOperation.NotEmpty || sOperation === P13nConditionOperation.Empty || sOperation === P13nConditionOperation.Initial || sOperation === P13nConditionOperation.Ascending || sOperation === P13nConditionOperation.Descending || sOperation === P13nConditionOperation.Total || sOperation === P13nConditionOperation.Average || sOperation === P13nConditionOperation.Minimum || sOperation === P13nConditionOperation.Maximum) {
 
 					// for this operations we disable both value fields
 					if (oValue1.getVisible()) {
@@ -2285,7 +2327,7 @@ sap.ui.define([
 		var oCurrentKeyField = this._getCurrentKeyFieldItem(oConditionGrid.keyField);
 		if (oCurrentKeyField && oCurrentKeyField.type === "numc") {
 			// in case of type numc and Contains or EndsWith operator the leading 0 will be removed
-			if ([sap.m.P13nConditionOperation.Contains, sap.m.P13nConditionOperation.EndsWith].indexOf(sOperation) != -1) {
+			if ([P13nConditionOperation.Contains, P13nConditionOperation.EndsWith].indexOf(sOperation) != -1) {
 				oValue1 = oConditionGrid.oType.formatValue(oValue1, "string");
 			}
 		}
@@ -2331,7 +2373,7 @@ sap.ui.define([
 			"operation": sOperation,
 			"keyField": sKeyField,
 			"value1": oValue1,
-			"value2": sOperation === sap.m.P13nConditionOperation.BT ? oValue2 : null,
+			"value2": sOperation === P13nConditionOperation.BT ? oValue2 : null,
 			"showIfGrouped": bShowIfGrouped
 		};
 		sKey = this._getKeyFromConditionGrid(oConditionGrid);
@@ -2386,7 +2428,7 @@ sap.ui.define([
 	 * returns the value as text from a Value field.
 	 */
 	P13nConditionPanel.prototype._getValueTextFromField = function(oControl) {
-		if (oControl instanceof sap.m.Select) {
+		if (oControl instanceof Select) {
 			return oControl.getSelectedItem() ? oControl.getSelectedItem().getText() : "";
 		}
 
@@ -2578,7 +2620,7 @@ sap.ui.define([
 
 		var sOperation = oConditionGrid.operation.getSelectedKey();
 
-		if (sOperation === sap.m.P13nConditionOperation.BT) {
+		if (sOperation === P13nConditionOperation.BT) {
 			if (!bValue1Empty ? bValue2Empty : !bValue2Empty) { // XOR
 				if (bValue1Empty) {
 					value1.setValueState(ValueState.Warning);
@@ -2620,10 +2662,57 @@ sap.ui.define([
 	 * @returns {string} the condition text
 	 */
 	P13nConditionPanel.prototype._getFormatedConditionText = function(sOperation, sValue1, sValue2, bExclude, sKeyField, bShowIfGrouped) {
-		var sConditionText = "";
+		var sConditionText = P13nConditionPanel.getFormatedConditionText(sOperation, sValue1, sValue2, bExclude);
+		if (!sConditionText) {
+			switch (sOperation) {
+				case P13nConditionOperation.Initial:
+					sConditionText = "=''";
+					break;
 
-		var sKeyFieldText = null;
+				case P13nConditionOperation.NotEmpty:
+					sConditionText = "!''";
+					break;
+
+				case P13nConditionOperation.Ascending:
+					sConditionText = "ascending";
+					break;
+				case P13nConditionOperation.GroupAscending:
+					sConditionText = "ascending";
+					sConditionText += " showIfGrouped:" + bShowIfGrouped;
+					break;
+
+				case P13nConditionOperation.Descending:
+					sConditionText = "descending";
+					break;
+				case P13nConditionOperation.GroupDescending:
+					sConditionText = "descending";
+					sConditionText += " showIfGrouped:" + bShowIfGrouped;
+					break;
+
+				case P13nConditionOperation.Total:
+					sConditionText = "total";
+					break;
+
+				case P13nConditionOperation.Average:
+					sConditionText = "average";
+					break;
+
+				case P13nConditionOperation.Minimum:
+					sConditionText = "minimum";
+					break;
+
+				case P13nConditionOperation.Maximum:
+					sConditionText = "maximum";
+					break;
+			}
+
+			if (bExclude && sConditionText !== "") {
+				sConditionText = "!(" + sConditionText + ")";
+			}
+		}
+
 		if (this._aKeyFields && this._aKeyFields.length > 1) {
+			var sKeyFieldText = null;
 			// search the text for the KeyField
 			for (var i = 0; i < this._aKeyFields.length; i++) {
 				var oKeyField = this._aKeyFields[i];
@@ -2633,105 +2722,111 @@ sap.ui.define([
 					}
 				}
 			}
+
+			if (sKeyFieldText && sConditionText !== "") {
+				sConditionText = sKeyFieldText + ": " + sConditionText;
+			}
 		}
 
+		return sConditionText;
+	};
+
+	/**
+	 * @enum {string}
+	 * @public
+	 * @experimental since version 1.26 !!! THIS TYPE IS ONLY FOR INTERNAL USE !!!
+	 */
+	// TODO: move to library.js
+	var P13nConditionOperation = sap.m.P13nConditionOperation = {
+		// filter operations
+		BT: "BT",
+		EQ: "EQ",
+		Contains: "Contains",
+		StartsWith: "StartsWith",
+		EndsWith: "EndsWith",
+		LT: "LT",
+		LE: "LE",
+		GT: "GT",
+		GE: "GE",
+		Initial: "Initial",
+		Empty: "Empty",
+		NotEmpty: "NotEmpty",
+
+		// sort operations
+		Ascending: "Ascending",
+		Descending: "Descending",
+
+		// group operations
+		GroupAscending: "GroupAscending",
+		GroupDescending: "GroupDescending",
+
+		// calculation operations
+		Total: "Total",
+		Average: "Average",
+		Minimum: "Minimum",
+		Maximum: "Maximum"
+	};
+
+	P13nConditionPanel._oConditionMap = {
+		"EQ": "=%1",
+		"GT": ">%1",
+		"GE": ">=%1",
+		"LT": "<%1",
+		"LE": "<=%1",
+		"Contains": "*%1*",
+		"StartsWith": "%1*",
+		"EndsWith": "*%1",
+		"BT": "%1...%2",
+		"Empty": "<%r>"
+	};
+
+	// Replase %r params in operation by resource bundle text
+	(function() {
+		var _oRb = sap.ui.getCore().getLibraryResourceBundle("sap.m");
+		P13nConditionPanel._oConditionMap[P13nConditionOperation.Empty] = P13nConditionPanel._oConditionMap[P13nConditionOperation.Empty].replace("%r", _oRb.getText("CONDITIONPANEL_OPTIONEmpty"));
+	})();
+
+	/**
+	 * creates and returns a formatted text for the specified condition
+	 * @public
+	 * @param {string} sOperation the operation type sap.m.P13nConditionOperation
+	 * @param {string} sValue1 value of the first range field
+	 * @param {string} sValue2 value of the second range field
+	 * @param {boolean} bExclude indicates if the range is an Exclude range
+	 * @returns {string} the range token text. An empty string when no operation matches or the values for the operation are wrong
+	 */
+	P13nConditionPanel.getFormatedConditionText = function(sOperation, sValue1, sValue2, bExclude) {
+		var sConditionText = "";
+
 		switch (sOperation) {
-			case sap.m.P13nConditionOperation.EQ:
-				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = "=" + sValue1;
-				}
+			case P13nConditionOperation.Empty:
+				// sConditionText = P13nConditionPanel._oConditionMap[sOperation];
+				sConditionText = P13nConditionPanel._oConditionMap[sOperation].replace("%1", sValue1).replace("%2", sValue2);
 				break;
-			case sap.m.P13nConditionOperation.GT:
+
+			case P13nConditionOperation.EQ:
+			case P13nConditionOperation.GT:
+			case P13nConditionOperation.GE:
+			case P13nConditionOperation.LT:
+			case P13nConditionOperation.LE:
+			case P13nConditionOperation.Contains:
+			case P13nConditionOperation.StartsWith:
+			case P13nConditionOperation.EndsWith:
 				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = ">" + sValue1;
-				}
-				break;
-			case sap.m.P13nConditionOperation.GE:
-				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = ">=" + sValue1;
+					// sConditionText = P13nConditionPanel._oConditionMap[sOperation].replace("%1", sValue1);
+					sConditionText = P13nConditionPanel._oConditionMap[sOperation].replace("%1", sValue1).replace("%2", sValue2);
 				}
 				break;
 
-			case sap.m.P13nConditionOperation.LT:
+			case P13nConditionOperation.BT:
 				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = "<" + sValue1;
-				}
-				break;
-
-			case sap.m.P13nConditionOperation.LE:
-				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = "<=" + sValue1;
-				}
-				break;
-
-			case sap.m.P13nConditionOperation.Contains:
-				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = "*" + sValue1 + "*";
-				}
-				break;
-
-			case sap.m.P13nConditionOperation.StartsWith:
-				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = sValue1 + "*";
-				}
-				break;
-
-			case sap.m.P13nConditionOperation.EndsWith:
-				if (sValue1 !== "" && sValue1 !== undefined) {
-					sConditionText = "*" + sValue1;
-				}
-				break;
-
-			case sap.m.P13nConditionOperation.BT:
-				if (sValue1 !== "" && sValue1 !== undefined) {
-					if (sValue2 !== "") {
-						sConditionText = sValue1 + "..." + sValue2;
+					if (sValue2 !== "" && sValue2 !== undefined) {
+						sConditionText = P13nConditionPanel._oConditionMap[sOperation].replace("%1", sValue1).replace("%2", sValue2);
 					}
 				}
 				break;
 
-			case sap.m.P13nConditionOperation.Initial:
-				sConditionText = "=''";
-				break;
-
-			case sap.m.P13nConditionOperation.Empty:
-				sConditionText = "''";
-				break;
-
-			case sap.m.P13nConditionOperation.NotEmpty:
-				sConditionText = "!''";
-				break;
-
-			case sap.m.P13nConditionOperation.Ascending:
-				sConditionText = "ascending";
-				break;
-			case sap.m.P13nConditionOperation.GroupAscending:
-				sConditionText = "ascending";
-				sConditionText += " showIfGrouped:" + bShowIfGrouped;
-				break;
-
-			case sap.m.P13nConditionOperation.Descending:
-				sConditionText = "descending";
-				break;
-			case sap.m.P13nConditionOperation.GroupDescending:
-				sConditionText = "descending";
-				sConditionText += " showIfGrouped:" + bShowIfGrouped;
-				break;
-
-			case sap.m.P13nConditionOperation.Total:
-				sConditionText = "total";
-				break;
-
-			case sap.m.P13nConditionOperation.Average:
-				sConditionText = "average";
-				break;
-
-			case sap.m.P13nConditionOperation.Minimum:
-				sConditionText = "minimum";
-				break;
-
-			case sap.m.P13nConditionOperation.Maximum:
-				sConditionText = "maximum";
+			default:
 				break;
 		}
 
@@ -2739,12 +2834,9 @@ sap.ui.define([
 			sConditionText = "!(" + sConditionText + ")";
 		}
 
-		if (sKeyFieldText && sConditionText !== "") {
-			sConditionText = sKeyFieldText + ": " + sConditionText;
-		}
-
 		return sConditionText;
 	};
+
 
 	P13nConditionPanel.prototype._updateLayout = function(oRangeInfo) {
 		if (!this._oConditionsGrid) {
@@ -2834,42 +2926,6 @@ sap.ui.define([
 			this._sLayoutMode = oRangeInfo.name;
 		}
 	};
-
-	/**
-	 * @enum {string}
-	 * @public
-	 * @experimental since version 1.26 !!! THIS TYPE IS ONLY FOR INTERNAL USE !!!
-	 */
-	sap.m.P13nConditionOperation = {
-		// filter operations
-		BT: "BT",
-		EQ: "EQ",
-		Contains: "Contains",
-		StartsWith: "StartsWith",
-		EndsWith: "EndsWith",
-		LT: "LT",
-		LE: "LE",
-		GT: "GT",
-		GE: "GE",
-		Initial: "Initial",
-		Empty: "Empty",
-		NotEmpty: "NotEmpty",
-
-		// sort operations
-		Ascending: "Ascending",
-		Descending: "Descending",
-
-		// group operations
-		GroupAscending: "GroupAscending",
-		GroupDescending: "GroupDescending",
-
-		// calculation operations
-		Total: "Total",
-		Average: "Average",
-		Minimum: "Minimum",
-		Maximum: "Maximum"
-	};
-
 
 	// this._findConfig("sap.ui.model.odata.type.Date", "operators") -->["EQ", "BT", "LE", "LT", "GE", "GT", "NE"]
 	// this._findConfig("sap.ui.model.odata.type.Date", "ctrl") -->"DatePicker"

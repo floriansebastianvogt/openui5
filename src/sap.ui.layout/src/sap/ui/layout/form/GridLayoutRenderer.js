@@ -2,8 +2,12 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './FormLayoutRenderer'],
-	function(jQuery, Renderer, FormLayoutRenderer) {
+sap.ui.define([
+	'sap/ui/core/Renderer',
+	'sap/ui/core/theming/Parameters',
+	'./FormLayoutRenderer',
+	"sap/base/Log"
+	], function(Renderer, themingParameters, FormLayoutRenderer, Log) {
 	"use strict";
 
 
@@ -85,7 +89,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './FormLayoutRendere
 
 			var sSize;
 			if (!oToolbar) {
-				sSize = sap.ui.core.theming.Parameters.get('sap.ui.layout.FormLayout:_sap_ui_layout_FormLayout_FormTitleSize');
+				sSize = themingParameters.get('sap.ui.layout.FormLayout:_sap_ui_layout_FormLayout_FormTitleSize');
 			}
 			this.renderHeader(rm, oToolbar, oTitle, undefined, false, sSize, oForm.getId());
 			rm.write("</th></tr>");
@@ -377,7 +381,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './FormLayoutRendere
 			// field must be full size - render label in a separate row
 			if (aReservedCells.length > 0 && aReservedCells[0] != "full") {
 				// already rowspans left -> ignore full line and raise error
-				jQuery.sap.log.error("Element \"" + oElement.getId() + "\" - Too much fields for one row!", "Renderer", "GridLayout");
+				Log.error("Element \"" + oElement.getId() + "\" - Too much fields for one row!", "Renderer", "GridLayout");
 				return aReservedCells;
 			}
 			if (bSeparatorColumn) {
@@ -489,7 +493,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './FormLayoutRendere
 				iCellsUsed = iCellsUsed + iColspan;
 				if (iCellsUsed > iCells) {
 					// too much cells
-					jQuery.sap.log.error("Element \"" + oElement.getId() + "\" - Too much fields for one row!", "Renderer", "GridLayout");
+					Log.error("Element \"" + oElement.getId() + "\" - Too much fields for one row!", "Renderer", "GridLayout");
 					iCellsUsed = iCellsUsed - iColspan; // to add empty dummy cell
 					break;
 				}

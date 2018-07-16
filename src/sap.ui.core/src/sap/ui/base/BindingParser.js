@@ -4,13 +4,22 @@
 
 // Provides static class sap.ui.base.BindingParser
 sap.ui.define([
-	'jquery.sap.global',
 	'./ExpressionParser',
 	'sap/ui/model/BindingMode',
 	'sap/ui/model/Filter',
 	'sap/ui/model/Sorter',
-	'jquery.sap.script'],
-	function(jQuery, ExpressionParser, BindingMode, Filter, Sorter/* , jQuerySap */) {
+	"sap/base/Log",
+	'sap/base/util/ObjectPath',
+	"sap/base/util/JSTokenizer"
+], function(
+		ExpressionParser,
+		BindingMode,
+		Filter,
+		Sorter,
+		Log,
+		ObjectPath,
+		JSTokenizer
+	) {
 	"use strict";
 
 	/**
@@ -140,7 +149,7 @@ sap.ui.define([
 		try {
 			BindingParser.mergeParts(oBindingInfo);
 		} catch (e) {
-			jQuery.sap.log.error("Cannot merge parts: " + e.message, sBinding,
+			Log.error("Cannot merge parts: " + e.message, sBinding,
 				"sap.ui.base.BindingParser");
 			// rely on error in ManagedObject
 		}
@@ -153,8 +162,9 @@ sap.ui.define([
 		 *
 		 * Names can consist of multiple segments, separated by dots.
 		 *
-		 * If the name starts with a dot ('.'), lookup will start with the
-		 * given context, otherwise it will start with the global context (window).
+		 * If the name starts with a dot ('.'), lookup happens within the given context only;
+		 * otherwise it will first happen within the given context (only if
+		 * <code>bPreferContext</code> is set) and then fall back to the global context (window).
 		 *
 		 * @param {object} o Object from which the property should be read and resolved
 		 * @param {string} sProp name of the property to resolve
@@ -163,17 +173,17 @@ sap.ui.define([
 			if ( typeof o[sProp] === "string" ) {
 				var fn, sName = o[sProp];
 				if ( o[sProp][0] === "." ) {
-					fn = jQuery.sap.getObject(o[sProp].slice(1), undefined, oEnv.oContext);
+					fn = ObjectPath.get(o[sProp].slice(1), oEnv.oContext);
 					o[sProp] = oEnv.bStaticContext ? fn : (fn && fn.bind(oEnv.oContext));
 				} else {
-					o[sProp] = jQuery.sap.getObject(o[sProp]);
+					o[sProp] = oEnv.bPreferContext && ObjectPath.get(o[sProp], oEnv.oContext) || ObjectPath.get(o[sProp]);
 				}
 				if (typeof (o[sProp]) !== "function") {
 					if (oEnv.bTolerateFunctionsNotFound) {
 						oEnv.aFunctionsNotFound = oEnv.aFunctionsNotFound || [];
 						oEnv.aFunctionsNotFound.push(sName);
 					} else {
-						jQuery.sap.log.error(sProp + " function " + sName + " not found!");
+						Log.error(sProp + " function " + sName + " not found!");
 					}
 				}
 			}
@@ -196,9 +206,9 @@ sap.ui.define([
 			var FNType;
 			if (typeof o.type === "string" ) {
 				if ( o.type[0] === "." ) {
-					FNType = jQuery.sap.getObject(o.type.slice(1), undefined, oEnv.oContext);
+					FNType = ObjectPath.get(o.type.slice(1), oEnv.oContext);
 				} else {
-					FNType = jQuery.sap.getObject(o.type);
+					FNType = ObjectPath.get(o.type);
 				}
 				// TODO find another solution for the type parameters?
 				if (typeof FNType === "function") {
@@ -328,7 +338,7 @@ sap.ui.define([
 	 *   at: The position after the last character for the embedded binding in the input string
 	 */
 	function resolveEmbeddedBinding(oEnv, sInput, iStart) {
-		var parseObject = jQuery.sap.parseJS,
+		var parseObject = JSTokenizer.parseJS,
 			oParseResult,
 			iEnd;
 
@@ -351,7 +361,7 @@ sap.ui.define([
 
 	BindingParser.simpleParser = function(sString, oContext) {
 
-		if ( jQuery.sap.startsWith(sString, "{") && jQuery.sap.endsWith(sString, "}") ) {
+		if ( sString.startsWith("{") && sString.endsWith("}") ) {
 			return makeSimpleBindingInfo(sString.slice(1, -1));
 		}
 
@@ -370,15 +380,19 @@ sap.ui.define([
 	 * @param {boolean} [bStaticContext=false]
 	 *   if true, relative function names found via <code>oContext</code> will not be treated as
 	 *   instance methods of the context, but as static methods
+	 * @param {boolean} [bPreferContext=false]
+	 *   if true, names without an initial dot are searched in the given context first and then
+	 *   globally
 	 */
 	BindingParser.complexParser = function(sString, oContext, bUnescape,
-			bTolerateFunctionsNotFound, bStaticContext) {
+			bTolerateFunctionsNotFound, bStaticContext, bPreferContext) {
 		var b2ndLevelMergedNeeded = false, // whether some 2nd level parts again have parts
 			oBindingInfo = {parts:[]},
 			bMergeNeeded = false, // whether some top-level parts again have parts
 			oEnv = {
 				oContext: oContext,
 				aFunctionsNotFound: undefined, // lazy creation
+				bPreferContext : bPreferContext,
 				bStaticContext: bStaticContext,
 				bTolerateFunctionsNotFound: bTolerateFunctionsNotFound
 			},

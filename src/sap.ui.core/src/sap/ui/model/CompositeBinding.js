@@ -3,8 +3,28 @@
  */
 
 // Provides an abstract property binding.
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', './BindingMode', './ChangeReason', './PropertyBinding', './CompositeType', './CompositeDataState'],
-	function(jQuery, DataType, BindingMode, ChangeReason, PropertyBinding, CompositeType, CompositeDataState) {
+sap.ui.define([
+	'sap/ui/base/DataType',
+	'./BindingMode',
+	'./ChangeReason',
+	'./PropertyBinding',
+	'./CompositeType',
+	'./CompositeDataState',
+	"sap/base/util/deepEqual",
+	"sap/base/assert",
+	"sap/base/Log"
+],
+	function(
+		DataType,
+		BindingMode,
+		ChangeReason,
+		PropertyBinding,
+		CompositeType,
+		CompositeDataState,
+		deepEqual,
+		assert,
+		Log
+	) {
 	"use strict";
 
 
@@ -40,17 +60,17 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', './BindingMode', './
 	});
 
 	CompositeBinding.prototype.getPath = function() {
-		jQuery.sap.assert(null, "Composite Binding has no path!");
+		assert(null, "Composite Binding has no path!");
 		return null;
 	};
 
 	CompositeBinding.prototype.getModel = function() {
-		jQuery.sap.assert(null, "Composite Binding has no model!");
+		assert(null, "Composite Binding has no model!");
 		return null;
 	};
 
 	CompositeBinding.prototype.getContext = function() {
-		jQuery.sap.assert(null, "Composite Binding has no context!");
+		assert(null, "Composite Binding has no context!");
 		return null;
 	};
 
@@ -174,7 +194,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', './BindingMode', './
 
 		// No twoway binding when using formatters
 		if (this.fnFormatter) {
-			jQuery.sap.log.warning("Tried to use twoway binding, but a formatter function is used");
+			Log.warning("Tried to use twoway binding, but a formatter function is used");
 			return;
 		}
 
@@ -412,7 +432,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', './BindingMode', './
 
 	/**
 	 * Attach event-handler <code>fnFunction</code> to the 'AggregatedDataStateChange' event of this
-	 * <code>sap.ui.model.CompositeBinding</code>. The AggregatedDataStateChange event is fired asynchronously, meaning
+	 * <code>sap.ui.model.CompositeBinding</code>. The 'AggregatedDataStateChange' event is fired asynchronously, meaning
 	 * that the datastate object given as parameter of the event contains all changes that were applied to the datastate
 	 * in the running thread.
 	 *
@@ -554,13 +574,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', './BindingMode', './
 		}
 		var oDataState = this.getDataState();
 		var aOriginalValues = this.getOriginalValue();
-		if (bForceUpdate || !jQuery.sap.equal(aOriginalValues, this.aOriginalValues)) {
+		if (bForceUpdate || !deepEqual(aOriginalValues, this.aOriginalValues)) {
 			this.aOriginalValues = aOriginalValues;
 			oDataState.setOriginalValue(aOriginalValues);
 			bChanged = true;
 		}
 		var aValues = this.getValue();
-		if (!jQuery.sap.equal(aValues, this.aValues) || bForceUpdate) {// optimize for not firing the events when unneeded
+		if (!deepEqual(aValues, this.aValues) || bForceUpdate) {// optimize for not firing the events when unneeded
 			this.aValues = aValues;
 			oDataState.setValue(aValues);
 			this._fireChange({reason: ChangeReason.Change});

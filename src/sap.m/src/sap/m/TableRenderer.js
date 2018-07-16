@@ -2,8 +2,13 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './ListBaseRenderer', './ColumnListItemRenderer', 'sap/m/library'],
-	function(jQuery, Renderer, ListBaseRenderer, ColumnListItemRenderer, library) {
+sap.ui.define([
+	'sap/ui/core/Renderer',
+	'./ListBaseRenderer',
+	'./ColumnListItemRenderer',
+	'sap/m/library'
+],
+	function(Renderer, ListBaseRenderer, ColumnListItemRenderer, library) {
 	"use strict";
 
 
@@ -98,7 +103,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './ListBaseRenderer'
 				rm.write("</th>");
 				index++;
 			} else {
-				createBlankCell("SelCol");
+				createBlankCell("SelCol", "", true);
 			}
 		}
 
@@ -174,7 +179,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './ListBaseRenderer'
 		createBlankCell("NavCol", type + "Nav", !oTable._iItemNeedsColumn);
 
 		if (iModeOrder == 1) {
-			createBlankCell("SelCol");
+			createBlankCell("SelCol", "", true);
 		}
 
 		rm.write("</tr></" + groupTag + ">");
@@ -192,13 +197,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './ListBaseRenderer'
 	 */
 	TableRenderer.renderContainerAttributes = function(rm, oControl) {
 		rm.addClass("sapMListTblCnt");
-
-		// add sticky style classes
-		var iStickyValue = oControl.getStickyStyleValue();
-		if (iStickyValue) {
-			rm.addClass("sapMSticky");
-			rm.addClass("sapMSticky" + iStickyValue);
-		}
+		ListBaseRenderer.renderContainerAttributes.apply(this, arguments);
 	};
 
 	/**

@@ -3,8 +3,26 @@
  */
 
 // Provides base class sap.ui.core.Component for all components
-sap.ui.define(['jquery.sap.global', '../base/ManagedObject', './Component', './library', './UIComponentMetadata', './mvc/Controller', './mvc/View'],
-	function(jQuery, ManagedObject, Component, library, UIComponentMetadata, Controller, View) {
+sap.ui.define([
+	'../base/ManagedObject',
+	'./Component',
+	'./library',
+	'./UIComponentMetadata',
+	'./mvc/Controller',
+	'./mvc/View',
+	"sap/base/util/ObjectPath",
+	"sap/base/Log"
+],
+	function(
+		ManagedObject,
+		Component,
+		library,
+		UIComponentMetadata,
+		Controller,
+		View,
+		ObjectPath,
+		Log
+	) {
 	"use strict";
 
 	// shortcut for enum(s)
@@ -307,9 +325,9 @@ sap.ui.define(['jquery.sap.global', '../base/ManagedObject', './Component', './l
 	function getConstructorFunctionFor (vRoutingObjectConstructor) {
 		var fnConstructor;
 		if (typeof vRoutingObjectConstructor === "string") {
-			fnConstructor = jQuery.sap.getObject(vRoutingObjectConstructor);
+			fnConstructor = ObjectPath.get(vRoutingObjectConstructor);
 			if (!fnConstructor) {
-				jQuery.sap.log.error("The specified class for router or targets '" + vRoutingObjectConstructor + "' is undefined.", this);
+				Log.error("The specified class for router or targets '" + vRoutingObjectConstructor + "' is undefined.", this);
 			}
 		} else {
 			fnConstructor = vRoutingObjectConstructor;

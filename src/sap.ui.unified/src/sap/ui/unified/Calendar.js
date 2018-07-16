@@ -3,7 +3,6 @@
  */
 //Provides control sap.ui.unified.Calendar.
 sap.ui.define([
-	'jquery.sap.global',
 	'sap/ui/core/Control',
 	'sap/ui/core/LocaleData',
 	'sap/ui/unified/calendar/CalendarUtils',
@@ -18,9 +17,11 @@ sap.ui.define([
 	'sap/ui/core/format/DateFormat',
 	'sap/ui/core/ResizeHandler',
 	'sap/ui/core/Locale',
-	"./CalendarRenderer"
+	"./CalendarRenderer",
+	"sap/ui/dom/containsOrEquals",
+	"sap/base/util/deepEqual",
+	"sap/base/Log"
 ], function(
-	jQuery,
 	Control,
 	LocaleData,
 	CalendarUtils,
@@ -35,7 +36,10 @@ sap.ui.define([
 	DateFormat,
 	ResizeHandler,
 	Locale,
-	CalendarRenderer
+	CalendarRenderer,
+	containsOrEquals,
+	deepEqual,
+	Log
 ) {
 	"use strict";
 
@@ -250,17 +254,23 @@ sap.ui.define([
 			startDateChange : {},
 
 			/**
-			 * Week selection. Works for Gregorian calendars only and when <code>intervalSelection</code> is set to 'true'.
+			 * Week number selection changed. By default, clicking on the week number will select the corresponding week.
+			 * If the week has already been selected, clicking the week number will deselect it.
+			 *
+			 * The default behavior can be prevented using the <code>preventDefault</code> method.
+			 *
+			 * <b>Note</b> Works for Gregorian calendars only and when <code>intervalSelection</code> is set to 'true'.
 			 * @since 1.56
 			 */
 			weekNumberSelect : {
+				allowPreventDefault: true,
 				parameters : {
 					/**
 					 * The selected week number.
 					 */
 					weekNumber : {type: "int"},
 					/**
-					 * The days of the corresponding week.
+					 * The days of the corresponding week that are selected or deselected.
 					 */
 					weekDays: {type: "sap.ui.unified.DateRange"}
 				}
@@ -319,7 +329,7 @@ sap.ui.define([
 	Calendar.prototype.exit = function(){
 
 		if (this._sInvalidateMonth) {
-			jQuery.sap.clearDelayedCall(this._sInvalidateMonth);
+			clearTimeout(this._sInvalidateMonth);
 		}
 
 		if (this._sResizeListener) {
@@ -449,7 +459,7 @@ sap.ui.define([
 		} else if (this.getDomRef() && this._iMode == 0 && !this._sInvalidateMonth) {
 			// DateRange changed -> only rerender days
 			// do this only once if more DateRanges / Special days are changed
-			this._sInvalidateMonth = jQuery.sap.delayedCall(0, this, this._invalidateMonth, [oOrigin]);
+			this._sInvalidateMonth = setTimeout(this._invalidateMonth.bind(this, oOrigin), 0);
 		}
 
 	};
@@ -800,7 +810,7 @@ sap.ui.define([
 	 */
 	Calendar.prototype.setMinDate = function(oDate){
 
-		if (jQuery.sap.equal(oDate, this.getMinDate())) {
+		if (deepEqual(oDate, this.getMinDate())) {
 			return this;
 		}
 
@@ -817,7 +827,7 @@ sap.ui.define([
 			CalendarUtils._checkYearInValidRange(iYear);
 
 			if (this._oMaxDate.isBefore(this._oMinDate)) {
-				jQuery.sap.log.warning("minDate > maxDate -> maxDate set to end of the month", this);
+				Log.warning("minDate > maxDate -> maxDate set to end of the month", this);
 				this._oMaxDate = CalendarDate.fromLocalJSDate(oDate, this.getPrimaryCalendarType());
 				this._oMaxDate.setDate(CalendarUtils._daysInMonth(this._oMaxDate));
 				this.setProperty("maxDate", this._oMaxDate.toLocalJSDate(), true);
@@ -845,7 +855,7 @@ sap.ui.define([
 	 */
 	Calendar.prototype.setMaxDate = function(oDate){
 
-		if (jQuery.sap.equal(oDate, this.getMaxDate())) {
+		if (deepEqual(oDate, this.getMaxDate())) {
 			return this;
 		}
 
@@ -861,7 +871,7 @@ sap.ui.define([
 			CalendarUtils._checkYearInValidRange(iYear);
 
 			if (this._oMinDate.isAfter(this._oMaxDate)) {
-				jQuery.sap.log.warning("maxDate < minDate -> minDate set to begin of the month", this);
+				Log.warning("maxDate < minDate -> minDate set to begin of the month", this);
 				this._oMinDate = CalendarDate.fromLocalJSDate(oDate, this.getPrimaryCalendarType());
 				this._oMinDate.setDate(1);
 				this.setProperty("minDate", this._oMinDate.toLocalJSDate(), true);
@@ -891,7 +901,7 @@ sap.ui.define([
 		if (this._oFocusedDate) {
 			// check if still in valid range
 			if (CalendarUtils._isOutside(this._oFocusedDate, this._oMinDate, this._oMaxDate)) {
-				jQuery.sap.log.warning("focused date is not between [minDate - maxDate] -> refocus to the new max/min date: " + oDate.toString(), this);
+				Log.warning("focused date is not between [minDate - maxDate] -> refocus to the new max/min date: " + oDate.toString(), this);
 				this.focusDate(oDate.toLocalJSDate());
 			}
 		}
@@ -1001,11 +1011,17 @@ sap.ui.define([
 		// if tab was pressed on a day it should jump to the month and then to the year button
 		var oHeader = this.getAggregation("header");
 
-		if (jQuery.sap.containsOrEquals(this.getDomRef("content"), oEvent.target)) {
+		if (containsOrEquals(this.getDomRef("content"), oEvent.target)) {
 			if (this._shouldFocusB2OnTabNext(oEvent)) {
-				jQuery.sap.focus(oHeader.getDomRef("B2"));
+				var oDomRefB2 = oHeader.getDomRef("B2");
+				if (oDomRefB2) {
+					oDomRefB2.focus();
+				}
 			} else {
-				jQuery.sap.focus(oHeader.getDomRef("B1"));
+				var oDomRefB1 = oHeader.getDomRef("B1");
+				if (oDomRefB1) {
+					oDomRefB1.focus();
+				}
 			}
 
 			if (!this._bPoupupMode) {
@@ -1032,7 +1048,10 @@ sap.ui.define([
 
 			oEvent.preventDefault();
 		} else if (this._shouldFocusB2OnTabNext(oEvent)) {
-			jQuery.sap.focus(oHeader.getDomRef("B2"));
+			var oDomRefB2 = oHeader.getDomRef("B2");
+			if (oDomRefB2) {
+				oDomRefB2.focus();
+			}
 
 			oEvent.preventDefault();
 			//} else if (oEvent.target.id == oHeader.getId() + "-B2") {
@@ -1055,11 +1074,14 @@ sap.ui.define([
 
 		var oHeader = this.getAggregation("header");
 
-		if (jQuery.sap.containsOrEquals(this.getDomRef("content"), oEvent.target)) {
+		if (containsOrEquals(this.getDomRef("content"), oEvent.target)) {
 			// tab from day, month or year -> go to header
 
 			if (this._shouldFocusB2OnTabPrevious()) {
-				jQuery.sap.focus(oHeader.getDomRef("B2"));
+				var oDomRefB2 = oHeader.getDomRef("B2");
+				if (oDomRefB2) {
+					oDomRefB2.focus();
+				}
 				oEvent.preventDefault();
 			}
 		} else if (oEvent.target.id == oHeader.getId() + "-B1") {
@@ -1099,7 +1121,10 @@ sap.ui.define([
 
 			oEvent.preventDefault();
 		} else if (oEvent.target.id == oHeader.getId() + "-B2") {
-			jQuery.sap.focus(oHeader.getDomRef("B1"));
+			var oDomRefB1 = oHeader.getDomRef("B1");
+			if (oDomRefB1) {
+				oDomRefB1.focus();
+			}
 
 			oEvent.preventDefault();
 		}
@@ -1140,7 +1165,10 @@ sap.ui.define([
 	Calendar.prototype._focusOnShiftTab = function() {
 		var oHeader = this.getAggregation("header");
 
-		jQuery.sap.focus(oHeader.getDomRef("B2"));
+		var oDomRefB2 = oHeader.getDomRef("B2");
+		if (oDomRefB2) {
+			oDomRefB2.focus();
+		}
 	};
 
 	Calendar.prototype.onsapfocusleave = function(oEvent){
@@ -1149,7 +1177,7 @@ sap.ui.define([
 			oMonthPicker,
 			oYearPicker;
 
-		if (!oEvent.relatedControlId || !jQuery.sap.containsOrEquals(this.getDomRef(), sap.ui.getCore().byId(oEvent.relatedControlId).getFocusDomRef())) {
+		if (!oEvent.relatedControlId || !containsOrEquals(this.getDomRef(), sap.ui.getCore().byId(oEvent.relatedControlId).getFocusDomRef())) {
 			// put dummy element back to tab-chain
 			this.$("end").attr("tabindex", "0");
 
@@ -1534,7 +1562,7 @@ sap.ui.define([
 
 		if (bRestoreOldDate) {
 			// in multimonth mode stay at the last focused date
-			if (!jQuery.sap.equal(this._getFocusedDate(), oDate)) {
+			if (!deepEqual(this._getFocusedDate(), oDate)) {
 				this._renderMonth(false, false, true);
 			}
 		} else {
@@ -2300,10 +2328,28 @@ sap.ui.define([
 			oFormatter = sap.ui.core.format.DateFormat.getInstance({pattern: "yyyyMMdd"}),
 			oStartDate = oFormatter.parse(sStartDate),
 			oEndDate = new Date(oStartDate.getFullYear(), oStartDate.getMonth(), oStartDate.getDate() + 6),
-			oDateRange = new DateRange({startDate: oStartDate, endDate: oEndDate});
+			oDateRange = new DateRange({startDate: oStartDate, endDate: oEndDate}),
+			aSelectedDates = this.getSelectedDates();
 
-		this.fireEvent("weekNumberSelect", {weekNumber: oSelectedWeekNumber, weekDays: oDateRange});
-		this.focusDate(oStartDate);
+		if (
+			aSelectedDates.length &&
+			aSelectedDates[0].getStartDate().getTime() === oDateRange.getStartDate().getTime() &&
+			aSelectedDates[0].getEndDate() &&
+			aSelectedDates[0].getEndDate().getTime() === oDateRange.getEndDate().getTime()
+		) {
+			oDateRange = null;
+		}
+
+		if (this.fireWeekNumberSelect({weekNumber: oSelectedWeekNumber, weekDays: oDateRange})) {
+			//when intervalSelection: true, only one range can be selected at a time, so
+			//destroy the old selected dates and select the new ones except one case -
+			//when again clicked on a same week number - then remove the selections
+			this.removeAllSelectedDates();
+
+			this.addSelectedDate(oDateRange);
+
+			this.focusDate(oStartDate);
+		}
 	};
 
 	function _handleResize(oEvent){

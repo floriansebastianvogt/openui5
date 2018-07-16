@@ -238,10 +238,15 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 					return dialog;
 				}
 
+				//TODO: global jquery call found
 				$.sap.require("sap.m.Dialog");
+				//TODO: global jquery call found
 				$.sap.require("sap.m.Button");
+				//TODO: global jquery call found
 				$.sap.require("sap.ui.core.HTML");
+				//TODO: global jquery call found
 				$.sap.require("sap.m.MessageToast");
+				//TODO: global jquery call found
 				$.sap.require("sap.ui.core.support.trace.E2eTraceLib");
 
 				dialog = new sap.m.Dialog({
@@ -274,7 +279,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 					var currentTouches = oEvent.touches.length;
 
 					if (Device.browser.mobile &&
-						(Device.browser.name === Device.browser.BROWSER.INTERNET_EXPLORER ||
+						(Device.browser.name === Device.browser.BROWSER.INTERNET_EXPLORER ||// TODO remove after 1.62 version
 						Device.browser.name === Device.browser.BROWSER.EDGE)) {
 						windowsPhoneTouches = currentTouches;
 					}
@@ -305,7 +310,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 			//function is triggered when a touch is removed e.g. the user’s finger is removed from the touchscreen.
 			function onTouchEnd(oEvent) {
 				var windowsPhoneTouchCondition = Device.browser.mobile &&
-					(Device.browser.name === Device.browser.BROWSER.INTERNET_EXPLORER ||
+					(Device.browser.name === Device.browser.BROWSER.INTERNET_EXPLORER ||// TODO remove after 1.62 version
 					Device.browser.name === Device.browser.BROWSER.EDGE) &&
 					windowsPhoneTouches == maxFingersAllowed;
 

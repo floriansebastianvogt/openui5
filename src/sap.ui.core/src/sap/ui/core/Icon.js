@@ -4,25 +4,24 @@
 
 // Provides control sap.ui.core.Icon.
 sap.ui.define([
-    'jquery.sap.global',
-    'sap/base/assert',
-    '../Device',
-    './Control',
-    './IconPool',
-    './InvisibleText',
-    './library',
-    "./IconRenderer",
-    'jquery.sap.keycodes'
+	'sap/base/assert',
+	'../Device',
+	'./Control',
+	'./IconPool',
+	'./InvisibleText',
+	'./library',
+	"./IconRenderer",
+	"sap/ui/events/KeyCodes"
 ],
 	function(
-	    jQuery,
 		assert,
 		Device,
 		Control,
 		IconPool,
 		InvisibleText,
-		library /* ,jQuerySapKeycodes */,
-		IconRenderer
+		library,
+		IconRenderer,
+		KeyCodes
 	) {
 	"use strict";
 
@@ -276,7 +275,7 @@ sap.ui.define([
 	 */
 	Icon.prototype.onkeydown = function(oEvent) {
 
-		if (oEvent.which === jQuery.sap.KeyCodes.SPACE || oEvent.which === jQuery.sap.KeyCodes.ENTER) {
+		if (oEvent.which === KeyCodes.SPACE || oEvent.which === KeyCodes.ENTER) {
 
 			// note: prevent document scrolling
 			oEvent.preventDefault();
@@ -305,7 +304,7 @@ sap.ui.define([
 	 */
 	Icon.prototype.onkeyup = function(oEvent) {
 
-		if (oEvent.which === jQuery.sap.KeyCodes.SPACE || oEvent.which === jQuery.sap.KeyCodes.ENTER) {
+		if (oEvent.which === KeyCodes.SPACE || oEvent.which === KeyCodes.ENTER) {
 
 			this.$().removeClass("sapUiIconActive");
 			this._restoreColors();
@@ -327,7 +326,7 @@ sap.ui.define([
 	/* =========================================================== */
 
 	Icon.prototype.setSrc = function(sSrc) {
-		assert(IconPool.isIconURI(sSrc), this + ": Property 'src' (value: '" + sSrc + "') should be a valid Icon URI (sap-icon://...)");
+		assert(sSrc == null || IconPool.isIconURI(sSrc), this + ": Property 'src' (value: '" + sSrc + "') should be a valid Icon URI (sap-icon://...)");
 
 		var vIconInfo = IconPool.getIconInfo(sSrc, undefined, "mixed"),
 			$Icon = this.$(),

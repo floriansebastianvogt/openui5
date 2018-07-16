@@ -3,8 +3,12 @@
  */
 
 // Provides control sap.ui.layout.form.FormContainer.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/theming/Parameters', 'sap/ui/layout/library'],
-	function(jQuery, Element, Parameters, library) {
+sap.ui.define([
+	'sap/ui/core/Element',
+	'sap/ui/core/theming/Parameters',
+	'sap/ui/layout/library',
+	"sap/base/Log"
+	], function(Element, Parameters, library, Log) {
 	"use strict";
 
 
@@ -205,7 +209,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/theming/
 		var iReturn = 0;
 
 		if (this.getExpandable() && (!this.getTitle() || this.getToolbar())) {
-			jQuery.sap.log.warning("Expander only displayed if title is set", this.getId(), "FormContainer");
+			Log.warning("Expander only displayed if title is set", this.getId(), "FormContainer");
 			iReturn = 1;
 		}
 

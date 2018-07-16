@@ -4,13 +4,13 @@
 
 //Provides class sap.ui.model.odata.v4.ODataPropertyBinding
 sap.ui.define([
-	"jquery.sap.global",
 	"sap/ui/base/SyncPromise",
 	"sap/ui/model/ChangeReason",
 	"sap/ui/model/PropertyBinding",
 	"./lib/_Cache",
-	"./ODataBinding"
-], function (jQuery, SyncPromise, ChangeReason, PropertyBinding, _Cache, asODataBinding) {
+	"./ODataBinding",
+	"sap/base/Log"
+], function (SyncPromise, ChangeReason, PropertyBinding, _Cache, asODataBinding, Log) {
 	"use strict";
 
 	var sClassName = "sap.ui.model.odata.v4.ODataPropertyBinding",
@@ -41,9 +41,9 @@ sap.ui.define([
 	 * @alias sap.ui.model.odata.v4.ODataPropertyBinding
 	 * @author SAP SE
 	 * @class Property binding for an OData V4 model.
-	 *   An event handler can only be attached to this binding for the following events: 'change',
-	 *   'dataReceived', and 'dataRequested'.
-	 *   For unsupported events, an error is thrown.
+	 *   An event handler can only be attached to this binding for the following events:
+	 *   'AggregatedDataStateChange', 'change', 'dataReceived', 'dataRequested' and
+	 *   'DataStateChange'. For unsupported events, an error is thrown.
 	 * @extends sap.ui.model.PropertyBinding
 	 * @mixes sap.ui.model.odata.v4.ODataBinding
 	 * @public
@@ -58,16 +58,19 @@ sap.ui.define([
 	var ODataPropertyBinding
 		= PropertyBinding.extend("sap.ui.model.odata.v4.ODataPropertyBinding", {
 			constructor : function (oModel, sPath, oContext, mParameters) {
-				var oBindingParameters;
 
 				PropertyBinding.call(this, oModel, sPath);
 
 				if (sPath.slice(-1) === "/") {
 					throw new Error("Invalid path: " + sPath);
 				}
-				oBindingParameters = this.oModel.buildBindingParameters(mParameters, ["$$groupId"]);
+				if (mParameters) {
+					this.checkBindingParameters(mParameters, ["$$groupId"]);
+					this.sGroupId = mParameters.$$groupId;
+				} else {
+					this.sGroupId = undefined;
+				}
 				this.oCheckUpdateCallToken = undefined;
-				this.sGroupId = oBindingParameters.$$groupId;
 				// Note: no system query options supported at property binding
 				this.mQueryOptions = this.oModel.buildQueryOptions(mParameters,
 					/*bSystemQueryOptionsAllowed*/false);
@@ -173,7 +176,10 @@ sap.ui.define([
 	 * If the binding's path cannot be resolved or if reading the binding's value fails or if the
 	 * value read is invalid (e.g. not a primitive value), the binding's value is reset to
 	 * <code>undefined</code>. As described above, this may trigger a change event depending on the
-	 * previous value and the <code>bForceUpdate</code> parameter.
+	 * previous value and the <code>bForceUpdate</code> parameter. In the end the data state is
+	 * checked (see {@link sap.ui.model.PropertyBinding#checkDataState}) even if there is no change
+	 * event. If there are multiple synchronous <code>checkUpdate</code> calls the data state is
+	 * checked only after the last call is processed.
 	 *
 	 * @param {boolean} [bForceUpdate=false]
 	 *   If <code>true</code> the change event is always fired except there is no context for a
@@ -189,6 +195,7 @@ sap.ui.define([
 	 *
 	 * @private
 	 * @see sap.ui.model.Binding#checkUpdate
+	 * @see sap.ui.model.PropertyBinding#checkDataState
 	 */
 	// @override
 	ODataPropertyBinding.prototype.checkUpdate = function (bForceUpdate, sChangeReason, sGroupId,
@@ -234,7 +241,7 @@ sap.ui.define([
 						&& that.sPath[that.sPath.lastIndexOf("/") + 1] === "#")) {
 					return vValue;
 				}
-				jQuery.sap.log.error("Accessed value is not primitive", sResolvedPath, sClassName);
+				Log.error("Accessed value is not primitive", sResolvedPath, sClassName);
 			}, function (oError) {
 				// do not rethrow, ManagedObject doesn't react on this either
 				// throwing an exception would cause "Uncaught (in promise)" in Chrome
@@ -261,6 +268,7 @@ sap.ui.define([
 					that.vValue = vValue;
 					that._fireChange({reason : sChangeReason || ChangeReason.Change});
 				}
+				that.checkDataState();
 			}
 			if (bDataRequested) {
 				that.fireDataReceived(mParametersForDataReceived);
@@ -578,8 +586,8 @@ sap.ui.define([
 	 *   The group ID to be used for this update call; if not specified, the update group ID for
 	 *   this binding (or its relevant parent binding) is used, see
 	 *   {@link sap.ui.model.odata.v4.ODataPropertyBinding#constructor}.
-	 *   Valid values are <code>undefined</code>, '$auto', '$direct' or application group IDs as
-	 *   specified in {@link sap.ui.model.odata.v4.ODataModel#submitBatch}.
+	 *   Valid values are <code>undefined</code>, '$auto', '$auto.*', '$direct' or application group
+	 *   IDs as specified in {@link sap.ui.model.odata.v4.ODataModel}.
 	 * @throws {Error}
 	 *   If the binding's root binding is suspended, the new value is not primitive or no value has
 	 *   been read before

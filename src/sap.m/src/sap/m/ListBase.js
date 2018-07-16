@@ -4,8 +4,7 @@
 
 // Provides control sap.m.ListBase.
 sap.ui.define([
-	"jquery.sap.global",
-	"sap/base/events/KeyCodes",
+	"sap/ui/events/KeyCodes",
 	"sap/ui/Device",
 	"sap/ui/core/Control",
 	"sap/ui/core/InvisibleText",
@@ -16,10 +15,15 @@ sap.ui.define([
 	"./GrowingEnablement",
 	"./GroupHeaderListItem",
 	"./ListItemBase",
-	"./ListBaseRenderer"
+	"./ListBaseRenderer",
+	"sap/base/strings/capitalize",
+	"sap/ui/thirdparty/jquery",
+	"sap/base/Log",
+	"sap/ui/dom/jquery/control", // jQuery Plugin "control"
+	"sap/ui/dom/jquery/Selectors", // jQuery custom selectors ":sapTabbable"
+	"sap/ui/dom/jquery/Aria" // jQuery Plugin "addAriaLabelledBy", "removeAriaLabelledBy"
 ],
 function(
-	jQuery,
 	KeyCodes,
 	Device,
 	Control,
@@ -31,7 +35,10 @@ function(
 	GrowingEnablement,
 	GroupHeaderListItem,
 	ListItemBase,
-	ListBaseRenderer
+	ListBaseRenderer,
+	capitalize,
+	jQueryDOM,
+	Log
 ) {
 	"use strict";
 
@@ -56,6 +63,9 @@ function(
 
 	// shortcut for sap.m.ListHeaderDesign
 	var ListHeaderDesign = library.ListHeaderDesign;
+
+	// shortcut for sap.m.Sticky
+	var Sticky = library.Sticky;
 
 
 	/**
@@ -210,7 +220,30 @@ function(
 			 * Defines keyboard handling behavior of the control.
 			 * @since 1.38.0
 			 */
-			keyboardMode : {type : "sap.m.ListKeyboardMode", group : "Behavior", defaultValue : ListKeyboardMode.Navigation}
+			keyboardMode : {type : "sap.m.ListKeyboardMode", group : "Behavior", defaultValue : ListKeyboardMode.Navigation},
+
+			/**
+			 * Defines the section of the control that remains fixed at the top of the page during vertical scrolling as long as the control is in the viewport.
+			 *
+			 * <b>Note:</b> Enabling sticky column headers in List controls will not have any effect.
+			 *
+			 * There is limited browser support.
+			 * Browsers that do not support this feature are listed below:
+			 * <ul>
+			 * <li>IE</li>
+			 * <li>Edge lower than version 41 (EdgeHTML 16)</li>
+			 * <li>Firefox lower than version 59</li>
+			 * </ul>
+			 *
+			 * There are also some known limitations with respect to the scrolling behavior. A few are given below:
+			 * <ul>
+			 * <li>If the control is placed in certain layout containers, for example, the <code>sap.ui.layout.Grid</code> control,
+			 * the sticky elements of the control are not fixed at the top of the viewport. The control behaves in a similar way when placed within the <code>sap.m.ObjectPage</code> control.</li>
+			 * <li>If sticky column headers are enabled in the <code>sap.m.Table</code> control, setting focus on the column headers will let the table scroll to the top.</li>
+			 * </ul>
+			 * @since 1.58
+			 */
+			sticky : {type : "sap.m.Sticky[]", group : "Appearance"}
 		},
 		defaultAggregation : "items",
 		aggregations : {
@@ -593,14 +626,14 @@ function(
 		this._showBusyIndicator();
 
 		if (this._dataReceivedHandlerId != null) {
-			jQuery.sap.clearDelayedCall(this._dataReceivedHandlerId);
+			clearTimeout(this._dataReceivedHandlerId);
 			delete this._dataReceivedHandlerId;
 		}
 	};
 
 	ListBase.prototype._onBindingDataReceivedListener = function(oEvent) {
 		if (this._dataReceivedHandlerId != null) {
-			jQuery.sap.clearDelayedCall(this._dataReceivedHandlerId);
+			clearTimeout(this._dataReceivedHandlerId);
 			delete this._dataReceivedHandlerId;
 		}
 
@@ -608,10 +641,10 @@ function(
 		// Under certain conditions it can happen that there are multiple requests in the request queue of the binding, which will be processed
 		// sequentially. In this case the busy indicator will be shown and hidden multiple times (flickering) until all requests have been
 		// processed. With this timer we avoid the flickering, as the list will only be set to not busy after all requests have been processed.
-		this._dataReceivedHandlerId = jQuery.sap.delayedCall(0, this, function() {
+		this._dataReceivedHandlerId = setTimeout(function() {
 			this._hideBusyIndicator();
 			delete this._dataReceivedHandlerId;
-		});
+		}.bind(this), 0);
 	};
 
 	ListBase.prototype.destroyItems = function(bSuppressInvalidate) {
@@ -737,7 +770,7 @@ function(
 	 */
 	ListBase.prototype.setSelectedItem = function(oListItem, bSelect, bFireEvent) {
 		if (this.indexOfItem(oListItem) < 0) {
-			jQuery.sap.log.warning("setSelectedItem is called without valid ListItem parameter on " + this);
+			Log.warning("setSelectedItem is called without valid ListItem parameter on " + this);
 			return;
 		}
 		if (this._bSelectionMode) {
@@ -1135,12 +1168,19 @@ function(
 
 	// fire updateStarted event with update reason and actual/total info
 	ListBase.prototype._fireUpdateStarted = function(sReason, oInfo) {
-		this._sUpdateReason = jQuery.sap.charToUpperCase(sReason || "Refresh");
+		this._sUpdateReason = capitalize(sReason || "Refresh");
 		this.fireUpdateStarted({
 			reason : this._sUpdateReason,
 			actual : oInfo ? oInfo.actual : this.getItems(true).length,
 			total : oInfo ? oInfo.total : this.getMaxItemsCount()
 		});
+	};
+
+	// event listener for theme changed
+	ListBase.prototype.onThemeChanged = function() {
+		if (this._oGrowingDelegate) {
+			this._oGrowingDelegate._updateTrigger();
+		}
 	};
 
 	// called on after rendering to finalize item update finished
@@ -1155,14 +1195,14 @@ function(
 	// fire updateFinished event delayed to make sure rendering phase is done
 	ListBase.prototype._fireUpdateFinished = function(oInfo) {
 		this._hideBusyIndicator();
-		jQuery.sap.delayedCall(0, this, function() {
+		setTimeout(function() {
 			this._bItemNavigationInvalidated = true;
 			this.fireUpdateFinished({
 				reason : this._sUpdateReason,
 				actual : oInfo ? oInfo.actual : this.getItems(true).length,
 				total : oInfo ? oInfo.total : this.getMaxItemsCount()
 			});
-		});
+		}.bind(this), 0);
 	};
 
 	ListBase.prototype._showBusyIndicator = function() {
@@ -1171,10 +1211,10 @@ function(
 			this._bBusy = true;
 
 			// TODO: would be great to have an event when busy indicator visually seen
-			this._sBusyTimer = jQuery.sap.delayedCall(this.getBusyIndicatorDelay(), this, function() {
+			this._sBusyTimer = setTimeout(function() {
 				// clean no data text
 				this.$("nodata-text").text("");
-			});
+			}.bind(this), this.getBusyIndicatorDelay());
 
 			// set busy property
 			this.setBusy(true, "listUl");
@@ -1186,7 +1226,7 @@ function(
 			// revert busy state
 			this._bBusy = false;
 			this.setBusy(false, "listUl");
-			jQuery.sap.clearDelayedCall(this._sBusyTimer);
+			clearTimeout(this._sBusyTimer);
 
 			// revert no data texts when necessary
 			if (!this.getItems(true).length) {
@@ -1282,12 +1322,12 @@ function(
 		}
 
 		// fire event async
-		jQuery.sap.delayedCall(0, this, function() {
+		setTimeout(function() {
 			this.fireItemPress({
 				listItem : oListItem,
 				srcControl : oSrcControl
 			});
-		});
+		}.bind(this), 0);
 	};
 
 	// insert or remove given item's path from selection array
@@ -1668,6 +1708,9 @@ function(
 
 	// this gets called when the focus is on the item or its content
 	ListBase.prototype.onItemFocusIn = function(oItem, oFocusedControl) {
+		// focus and scroll handling for sticky elements
+		this._handleStickyItemFocus(oItem.getDomRef());
+
 		if (oItem !== oFocusedControl) {
 			return;
 		}
@@ -1739,8 +1782,13 @@ function(
 		}
 
 		// if focus is not on the navigation items then only invalidate the item navigation
-		if (bIfNeeded && !this.getNavigationRoot().contains(document.activeElement)) {
+		var oNavigationRoot = this.getNavigationRoot();
+		var iTabIndex = (sKeyboardMode == mKeyboardMode.Edit) ? -1 : 0;
+		if (bIfNeeded && !oNavigationRoot.contains(document.activeElement)) {
 			this._bItemNavigationInvalidated = true;
+			if (!oNavigationRoot.getAttribute("tabindex")) {
+				oNavigationRoot.tabIndex = iTabIndex;
+			}
 			return;
 		}
 
@@ -1751,7 +1799,6 @@ function(
 			this.addEventDelegate(this._oItemNavigation);
 
 			// set the tab index of active items
-			var iTabIndex = (sKeyboardMode == mKeyboardMode.Edit) ? -1 : 0;
 			this._setItemNavigationTabIndex(iTabIndex);
 
 			// explicitly setting table mode with one column
@@ -1770,10 +1817,9 @@ function(
 		this._oItemNavigation.setPageSize(this.getGrowingThreshold());
 
 		// configure navigation root
-		var oNavigationRoot = this.getNavigationRoot();
 		this._oItemNavigation.setRootDomRef(oNavigationRoot);
 
-		// configure navigatable items
+		// configure navigation items
 		this.setNavigationItems(this._oItemNavigation, oNavigationRoot);
 
 		// clear invalidations
@@ -1900,7 +1946,7 @@ function(
 
 		// find the current section index
 		this._aNavSections.some(function(sSectionId, iSectionIndex) {
-			var oSectionDomRef = jQuery.sap.domById(sSectionId);
+			var oSectionDomRef = (sSectionId ? window.document.getElementById(sSectionId) : null);
 			if (oSectionDomRef && oSectionDomRef.contains(document.activeElement)) {
 				iIndex = iSectionIndex;
 				return true;
@@ -1909,7 +1955,7 @@ function(
 
 		// if current section is items container then save the current focus position
 		var oItemsContainerDomRef = this.getItemsContainerDomRef();
-		var $CurrentSection = jQuery.sap.byId(this._aNavSections[iIndex]);
+		var $CurrentSection = jQueryDOM(document.getElementById(this._aNavSections[iIndex]));
 		if ($CurrentSection[0] === oItemsContainerDomRef && this._oItemNavigation) {
 			$CurrentSection.data("redirect", this._oItemNavigation.getFocusedIndex());
 		}
@@ -1917,7 +1963,7 @@ function(
 		// find the next focusable section
 		this._aNavSections.some(function() {
 			iIndex = (iIndex + iStep + iLength) % iLength;	// circle
-			$TargetSection = jQuery.sap.byId(this._aNavSections[iIndex]);
+			$TargetSection = jQueryDOM(document.getElementById(this._aNavSections[iIndex]));
 
 			// if target is items container
 			if ($TargetSection[0] === oItemsContainerDomRef && this._oItemNavigation) {
@@ -2123,6 +2169,150 @@ function(
 	// invalidation of the table list is not required for destroying the context menu
 	ListBase.prototype.destroyContextMenu = function() {
 		this.destroyAggregation("contextMenu", true);
+	};
+
+	// check if browser supports css sticky
+	ListBase.getStickyBrowserSupport = function() {
+		var oBrowser = Device.browser;
+		return (oBrowser.safari || oBrowser.chrome
+			|| (oBrowser.firefox && oBrowser.version >= 59)
+			|| (oBrowser.edge && oBrowser.version >= 16));
+	};
+
+	// Returns the sticky value to be added to the sticky table container.
+	// sapMSticky7 is the result of sticky headerToolbar, infoToolbar and column headers.
+	// sapMSticky6 is the result of sticky infoToolbar and column headers.
+	// sapMSticky5 is the result of sticky headerToolbar and column headers.
+	// sapMSticky4 is the result of sticky column headers only.
+	// sapMSticky3 is the result of sticky headerToolbar and infoToolbar.
+	// sapMSticky2 is the result of sticky infoToolbar.
+	// sapMSticky1 is the result of sticky headerToolbar.
+	ListBase.prototype.getStickyStyleValue = function() {
+		var aSticky = this.getSticky();
+		if (!aSticky || !aSticky.length || !ListBase.getStickyBrowserSupport()) {
+			return (this._iStickyValue = 0);
+		}
+
+		var iStickyValue = 0,
+			sHeaderText = this.getHeaderText(),
+			oHeaderToolbar = this.getHeaderToolbar(),
+			bHeaderToolbarVisible = sHeaderText || (oHeaderToolbar && oHeaderToolbar.getVisible()),
+			oInfoToolbar = this.getInfoToolbar(),
+			bInfoToolbar = oInfoToolbar && oInfoToolbar.getVisible(),
+			bColumnHeadersVisible = false;
+
+		if (this.isA("sap.m.Table")) {
+			bColumnHeadersVisible = this.getColumns().some(function(oColumn) {
+				return oColumn.getVisible() && oColumn.getHeader();
+			});
+		}
+
+		aSticky.forEach(function(sSticky) {
+			if (sSticky === Sticky.HeaderToolbar && bHeaderToolbarVisible) {
+				iStickyValue += 1;
+			} else if (sSticky === Sticky.InfoToolbar && bInfoToolbar) {
+				iStickyValue += 2;
+			} else if (sSticky === Sticky.ColumnHeaders && bColumnHeadersVisible) {
+				iStickyValue += 4;
+			}
+		});
+
+		return (this._iStickyValue = iStickyValue);
+	};
+
+	// gets the sticky header position and scrolls the page so that the item is completely visible when focused
+	ListBase.prototype._handleStickyItemFocus = function(oItemDomRef) {
+		// when an item is focused and later focus is lost from the list control, the list control is scrolled and new item is focused,
+		// this resulted in unnecessary scroll jumping
+		if (!this._iStickyValue || this._sLastFocusedStickyItemId === oItemDomRef.id) {
+			return;
+		}
+
+		var oScrollDelegate = library.getScrollDelegate(this, true);
+		if (!oScrollDelegate) {
+			return;
+		}
+
+		// check the all the sticky element and get their height
+		var iTHRectHeight = 0,
+			iTHRectBottom = 0,
+			iInfoTBarContainerRectHeight = 0,
+			iInfoTBarContainerRectBottom = 0,
+			iHeaderToolbarRectHeight = 0,
+			iHeaderToolbarRectBottom = 0;
+
+		if (this._iStickyValue & 4 /* ColumnHeaders */) {
+			var oTblHeaderDomRef = this.getDomRef("tblHeader").firstChild;
+			var oTblHeaderRect = oTblHeaderDomRef.getBoundingClientRect();
+			iTHRectBottom = parseInt(oTblHeaderRect.bottom, 10);
+			iTHRectHeight = parseInt(oTblHeaderRect.height, 10);
+		}
+
+		if (this._iStickyValue & 2 /* InfoToolbar */) {
+			// additional padding is applied in HCW and HCB theme, hence infoToolbarContainer height is required
+			var oInfoToolbarContainer = this.getInfoToolbar().$().parent()[0];
+			var oInfoToolbarContainerRect = oInfoToolbarContainer.getBoundingClientRect();
+			iInfoTBarContainerRectBottom = parseInt(oInfoToolbarContainerRect.bottom, 10);
+			iInfoTBarContainerRectHeight = parseInt(oInfoToolbarContainerRect.height, 10);
+		}
+
+		if (this._iStickyValue & 1 /* HeaderToolbar */) {
+			var oHeaderToolbarDomRef = this.getDomRef().querySelector(".sapMListHdr");
+			var oHeaderToolbarRect = oHeaderToolbarDomRef.getBoundingClientRect();
+			iHeaderToolbarRectBottom = parseInt(oHeaderToolbarRect.bottom, 10);
+			iHeaderToolbarRectHeight = parseInt(oHeaderToolbarRect.height, 10);
+		}
+
+		var iItemTop = oItemDomRef.getBoundingClientRect().top;
+
+		if (iTHRectBottom > iItemTop || iInfoTBarContainerRectBottom > iItemTop || iHeaderToolbarRectBottom > iItemTop) {
+			window.requestAnimationFrame(function () {
+				oScrollDelegate.scrollToElement(oItemDomRef, 0, [0, -iTHRectHeight - iInfoTBarContainerRectHeight - iHeaderToolbarRectHeight]);
+			});
+		}
+
+		this._sLastFocusedStickyItemId = oItemDomRef.id;
+	};
+
+	ListBase.prototype.setHeaderToolbar = function(oHeaderToolbar) {
+		return this._setToolbar("headerToolbar", oHeaderToolbar);
+	};
+
+	ListBase.prototype.setInfoToolbar = function(oInfoToolbar) {
+		return this._setToolbar("infoToolbar", oInfoToolbar);
+	};
+
+	ListBase.prototype._setToolbar = function(sAggregationName, oToolbar) {
+		var oOldToolbar = this.getAggregation(sAggregationName);
+		if (oOldToolbar) {
+			oOldToolbar.detachEvent("_change", this._onToolbarPropertyChanged, this);
+		}
+
+		this.setAggregation(sAggregationName, oToolbar);
+		if (oToolbar) {
+			oToolbar.attachEvent("_change", this._onToolbarPropertyChanged, this);
+		}
+		return this;
+	};
+
+	ListBase.prototype._onToolbarPropertyChanged = function(oEvent) {
+		if (oEvent.getParameter("name") !== "visible") {
+			return;
+		}
+
+		// update the sticky style class
+		var iOldStickyValue = this._iStickyValue,
+			iNewStickyValue = this.getStickyStyleValue();
+
+		if (iOldStickyValue !== iNewStickyValue) {
+			var oDomRef = this.getDomRef();
+			if (oDomRef) {
+				var aClassList = oDomRef.classList;
+				aClassList.toggle("sapMSticky", !!iNewStickyValue);
+				aClassList.remove("sapMSticky" + iOldStickyValue);
+				aClassList.toggle("sapMSticky" + iNewStickyValue, !!iNewStickyValue);
+			}
+		}
 	};
 
 	return ListBase;

@@ -26,6 +26,7 @@ sap.ui.define([
 
 	var CController = Controller.extend("sap.m.sample.MessageViewWithGrouping.C", {
 		onInit: function () {
+			var that = this;
 			// create any data and a model and set it to the view
 
 			var sErrorDescription = 'First Error message description. \n' +
@@ -101,7 +102,7 @@ sap.ui.define([
 
 			this.getView().setModel(viewModel);
 
-			var oMessageView = new MessageView({
+			this.oMessageView = new MessageView({
 					showDetailsPageHeader: false,
 					itemSelect: function () {
 						oBackButton.setVisible(true);
@@ -111,20 +112,20 @@ sap.ui.define([
 						template: oMessageTemplate
 					},
 					groupItems: true
-				}),
-				oBackButton = new sap.m.Button({
+				});
+			var oBackButton = new sap.m.Button({
 					icon: sap.ui.core.IconPool.getIconURI("nav-back"),
 					visible: false,
 					press: function () {
-						oMessageView.navigateBack();
+						that.oMessageView.navigateBack();
 						this.setVisible(false);
 					}
 				});
 
-			oMessageView.setModel(oModel);
+			this.oMessageView.setModel(oModel);
 
 			this.oDialog = new Dialog({
-				content: oMessageView,
+				content: this.oMessageView,
 				contentHeight: "440px",
 				contentWidth: "640px",
 				endButton: new sap.m.Button({
@@ -144,6 +145,7 @@ sap.ui.define([
 		},
 
 		handleMessageViewPress: function (oEvent) {
+			this.oMessageView.navigateBack();
 			this.oDialog.open();
 		}
 	});

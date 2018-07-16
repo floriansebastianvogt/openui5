@@ -3,8 +3,8 @@
  */
 
 // Provides base class sap.ui.core.Control for all controls
-sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', './UIArea', './RenderManager', './ResizeHandler', './BusyIndicatorUtils', './BlockLayerUtils'],
-	function(jQuery, CustomStyleClassSupport, Element, UIArea, RenderManager, ResizeHandler, BusyIndicatorUtils, BlockLayerUtils) {
+sap.ui.define(['./CustomStyleClassSupport', './Element', './UIArea', './RenderManager', './ResizeHandler', './BusyIndicatorUtils', './BlockLayerUtils', "sap/base/Log"],
+	function(CustomStyleClassSupport, Element, UIArea, RenderManager, ResizeHandler, BusyIndicatorUtils, BlockLayerUtils, Log) {
 	"use strict";
 
 	/**
@@ -189,7 +189,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 	 * @private
 	 */
 	Control.prototype.isActive = function() {
-		return jQuery.sap.domById(this.sId) != null;
+		return ((this.sId ? window.document.getElementById(this.sId) : null)) != null;
 	};
 
 	/**
@@ -531,7 +531,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 					bContainerSupportsPlaceAt = false;
 				}
 				if (!bContainerSupportsPlaceAt) {
-					jQuery.sap.log.warning("placeAt cannot be processed because container " + oContainer + " does not have an aggregation 'content'.");
+					Log.warning("placeAt cannot be processed because container " + oContainer + " does not have an aggregation 'content'.");
 					return this;
 				}
 			}
@@ -552,7 +552,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 						oContainer.addContent(this);
 						break;
 					default:
-						jQuery.sap.log.warning("Position " + vPosition + " is not supported for function placeAt.");
+						Log.warning("Position " + vPosition + " is not supported for function placeAt.");
 				}
 			}
 		} else {
@@ -673,7 +673,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 				// Only do it via timeout if there is a delay. Otherwise append the
 				// BusyIndicator immediately
 				if (iDelay) {
-					this._busyIndicatorDelayedCallId = jQuery.sap.delayedCall(iDelay, this, fnAppendBusyIndicator);
+					this._busyIndicatorDelayedCallId = setTimeout(fnAppendBusyIndicator.bind(this), iDelay);
 				} else {
 					fnAppendBusyIndicator.call(this);
 				}
@@ -698,14 +698,14 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 
 		//If there is a pending delayed call to append the busy indicator, we can clear it now
 		if (this._busyIndicatorDelayedCallId) {
-			jQuery.sap.clearDelayedCall(this._busyIndicatorDelayedCallId);
+			clearTimeout(this._busyIndicatorDelayedCallId);
 			delete this._busyIndicatorDelayedCallId;
 		}
 
 		// if no busy section/control jquery instance could be retrieved -> the control is not part of the dom anymore
 		// this might happen in certain scenarios when e.g. a dialog is closed faster than the busyIndicatorDelay
 		if (!$this || $this.length === 0) {
-			jQuery.sap.log.warning("BusyIndicator could not be rendered. The outer control instance is not valid anymore.");
+			Log.warning("BusyIndicator could not be rendered. The outer control instance is not valid anymore.");
 			return;
 		}
 
@@ -833,7 +833,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 				if (!this._oBusyBlockState && !this._oBlockState) {
 					fnAddStandaloneBlockLayer.call(this);
 				} else {
-					jQuery.sap.log.info("The control is already busy. Hence, no new block-layer was created for the shared section.");
+					Log.info("The control is already busy. Hence, no new block-layer was created for the shared section.");
 				}
 			} else {
 				fnAddStandaloneBlockLayer.call(this);
@@ -847,7 +847,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 
 				} else if (this.getBusy()) {
 					// Control or section is still busy, hence no removal required
-					jQuery.sap.log.info("The control is already busy. Hence, no new block-layer was created for the shared section.");
+					Log.info("The control is already busy. Hence, no new block-layer was created for the shared section.");
 
 				}
 			} else if (this._oBlockState) {
@@ -885,7 +885,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 			this.removeDelegate(oRenderingDelegate);
 			//If there is a pending delayed call we clear it
 			if (this._busyIndicatorDelayedCallId) {
-				jQuery.sap.clearDelayedCall(this._busyIndicatorDelayedCallId);
+				clearTimeout(this._busyIndicatorDelayedCallId);
 				delete this._busyIndicatorDelayedCallId;
 			}
 		}
@@ -899,7 +899,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 			if (this.getBusyIndicatorDelay() <= 0) {
 				fnAppendBusyIndicator.call(this);
 			} else {
-				this._busyIndicatorDelayedCallId = jQuery.sap.delayedCall(this.getBusyIndicatorDelay(), this, fnAppendBusyIndicator);
+				this._busyIndicatorDelayedCallId = setTimeout(fnAppendBusyIndicator.bind(this), this.getBusyIndicatorDelay());
 			}
 		} else {
 			fnRemoveBusyIndicator.call(this);
@@ -938,7 +938,7 @@ sap.ui.define(['jquery.sap.global', './CustomStyleClassSupport', './Element', '.
 	Control.prototype._cleanupBusyIndicator = function() {
 		//If there is a pending delayed call we clear it
 		if (this._busyIndicatorDelayedCallId) {
-			jQuery.sap.clearDelayedCall(this._busyIndicatorDelayedCallId);
+			clearTimeout(this._busyIndicatorDelayedCallId);
 			delete this._busyIndicatorDelayedCallId;
 		}
 		fnRemoveBusyIndicator.call(this, true);

@@ -3,8 +3,7 @@
  */
 
 // Provides control sap.ui.layout.form.GridLayout.
-sap.ui.define(['jquery.sap.global', './FormLayout', 'sap/ui/layout/library', './GridLayoutRenderer'],
-	function(jQuery, FormLayout, library, GridLayoutRenderer) {
+sap.ui.define(['sap/ui/layout/library', './FormLayout', './GridLayoutRenderer'], function(library, FormLayout, GridLayoutRenderer) {
 	"use strict";
 
 	/**
@@ -222,7 +221,7 @@ sap.ui.define(['jquery.sap.global', './FormLayout', 'sap/ui/layout/library', './
 			var oContainerData = this.getLayoutDataForElement(oContainer, "sap.ui.layout.form.GridContainerData");
 
 			if ((bSingleColumn || !oContainerData || !oContainerData.getHalfGrid()) && !this.getRenderer().checkFullSizeElement(this, oElement) ) {
-				return jQuery.sap.domById(oElement.getId());
+				return (oElement.getId() ? window.document.getElementById(oElement.getId()) : null);
 			}
 		}
 

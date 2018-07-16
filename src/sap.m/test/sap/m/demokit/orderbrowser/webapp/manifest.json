@@ -59,6 +59,9 @@
 				},
 				"sap.ui.layout": {
 					"minVersion": "1.38.0"
+				},
+				"sap.f": {
+					"minVersion": "1.38.0"
 				}
 			}
 		},
@@ -80,16 +83,13 @@
 		},
 		"routing": {
 			"config": {
-				"routerClass": "sap.m.routing.Router",
+				"routerClass": "sap.f.routing.Router",
 				"viewType": "XML",
 				"viewPath": "sap.ui.demo.orderbrowser.view",
-				"controlId": "idAppControl",
-				"controlAggregation": "detailPages",
+				"controlId": "app",
+				"controlAggregation": "midColumnPages",
 				"bypassed": {
-					"target": [
-						"master",
-						"notFound"
-					]
+					"target": "notFound"
 				},
 				"async": true
 			},
@@ -97,10 +97,7 @@
 				{
 					"pattern": "",
 					"name": "master",
-					"target": [
-						"object",
-						"master"
-					]
+					"target": "master"
 				},
 				{
 					"pattern": "Orders/{objectId}/:?query:",
@@ -116,7 +113,7 @@
 					"viewName": "Master",
 					"viewLevel": 1,
 					"viewId": "master",
-					"controlAggregation": "masterPages"
+					"controlAggregation": "beginColumnPages"
 				},
 				"object": {
 					"viewName": "Detail",
@@ -127,13 +124,10 @@
 					"viewName": "DetailObjectNotFound",
 					"viewId": "detailObjectNotFound"
 				},
-				"detailNoObjectsAvailable": {
-					"viewName": "DetailNoObjectsAvailable",
-					"viewId": "detailNoObjectsAvailable"
-				},
 				"notFound": {
 					"viewName": "NotFound",
-					"viewId": "notFound"
+					"viewId": "notFound",
+					"controlAggregation": "beginColumnPages"
 				},
 				"shipping": {
 					"viewName": "Shipping",

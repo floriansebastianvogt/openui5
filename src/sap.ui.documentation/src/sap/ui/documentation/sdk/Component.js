@@ -3,17 +3,30 @@
  */
 
 sap.ui.define([
-		"jquery.sap.global",
-		"sap/ui/core/UIComponent",
-		"sap/ui/Device",
-		"sap/ui/documentation/sdk/model/models",
-		"sap/ui/documentation/sdk/controller/ErrorHandler",
-		"sap/ui/model/json/JSONModel",
-		"sap/ui/documentation/sdk/controller/util/ConfigUtil",
-		"sap/ui/documentation/sdk/controller/util/APIInfo",
-		"sap/ui/documentation/sdk/util/DocumentationRouter", // used via manifest.json
-		"sap/m/ColumnListItem" // implements sap.m.TablePopin
-	], function (jQuery, UIComponent, Device, models, ErrorHandler, JSONModel, ConfigUtil, APIInfo /*, DocumentationRouter, ColumnListItem*/) {
+    "sap/ui/thirdparty/jquery",
+    "sap/ui/core/UIComponent",
+    "sap/ui/Device",
+    "sap/ui/documentation/sdk/model/models",
+    "sap/ui/documentation/sdk/controller/ErrorHandler",
+    "sap/ui/model/json/JSONModel",
+    "sap/ui/documentation/sdk/controller/util/ConfigUtil",
+    "sap/ui/documentation/sdk/controller/util/APIInfo",
+    "sap/base/util/Version",
+    // used via manifest.json
+	"sap/ui/documentation/sdk/util/DocumentationRouter",
+    // implements sap.m.TablePopin
+	"sap/m/ColumnListItem"
+], function(
+    jQuery,
+	UIComponent,
+	Device,
+	models,
+	ErrorHandler,
+	JSONModel,
+	ConfigUtil,
+	APIInfo /*, DocumentationRouter, ColumnListItem*/,
+	Version
+) {
 		"use strict";
 
 		var aTreeContent = [],
@@ -118,6 +131,7 @@ sap.ui.define([
 
 				this._indexPromise = new Promise(function (resolve, reject) {
 					APIInfo.getIndexJsonPromise().then(function (aData) {
+						this._aLibraryElements = aData;
 						this._parseLibraryElements(aData);
 						this._bindTreeModel(aTreeContent);
 						resolve(aData);
@@ -145,6 +159,7 @@ sap.ui.define([
 
 			_addElementToTreeData : function (oJSONElement) {
 				var oNewNodeNamespace,
+					oHiddenNamespace,
 					aAllowedMembers = this.aAllowedMembers;
 
 				if (aAllowedMembers.indexOf(oJSONElement.visibility) !== -1) {
@@ -161,14 +176,25 @@ sap.ui.define([
 							}
 							oExistingNodeNamespace.nodes.push(oTreeNode);
 						} else if (sNodeNamespace) {
-							oNewNodeNamespace = this._createTreeNode(sNodeNamespace, sNodeNamespace, sNodeNamespace === this._topicId, oJSONElement.lib);
-							oNewNodeNamespace.nodes = [];
-							oNewNodeNamespace.nodes.push(oTreeNode);
-							aTreeContent.push(oNewNodeNamespace);
 
-							this._removeDuplicatedNodeFromTree(sNodeNamespace);
+							// Check for existing hidden namespace - In case we have a namespace with visibility that
+							// we should not show in this scenario we should also omit it's children
+							oHiddenNamespace = this._aLibraryElements.some(function (oNode) {
+								return oNode.name === sNodeNamespace && aAllowedMembers.indexOf(oNode.visibility) === -1;
+							});
+
+							if (!oHiddenNamespace) {
+								oNewNodeNamespace = this._createTreeNode(sNodeNamespace, sNodeNamespace, sNodeNamespace === this._topicId, oJSONElement.lib);
+								oNewNodeNamespace.nodes = [];
+								oNewNodeNamespace.nodes.push(oTreeNode);
+
+								aTreeContent.push(oNewNodeNamespace);
+
+								this._removeDuplicatedNodeFromTree(sNodeNamespace);
+
+							}
 						} else {
-							// Entities for which we can't resolve namespace we are shown in the root level
+							// Entities for which we can't resolve namespace are shown in the root level
 							oNewNodeNamespace = this._createTreeNode(oJSONElement.name, oJSONElement.name, oJSONElement.name === this._topicId, oJSONElement.lib);
 							aTreeContent.push(oNewNodeNamespace);
 						}
@@ -271,7 +297,7 @@ sap.ui.define([
 				oVersionInfoData = {
 					versionGav: oVersionInfo.gav,
 					versionName: oVersionInfo.name,
-					version: jQuery.sap.Version(sVersion).getMajor() + "." + jQuery.sap.Version(sVersion).getMinor() + "." + jQuery.sap.Version(sVersion).getPatch(),
+					version: Version(sVersion).getMajor() + "." + Version(sVersion).getMinor() + "." + Version(sVersion).getPatch(),
 					fullVersion: sVersion,
 					openUi5Version: sap.ui.version,
 					isOpenUI5: oVersionInfo && oVersionInfo.gav && /openui5/i.test(oVersionInfo.gav),

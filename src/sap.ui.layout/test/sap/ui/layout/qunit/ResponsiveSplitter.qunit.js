@@ -100,7 +100,7 @@
 			assert.strictEqual(Array.isArray(this.oResponsiveSplitter._currentInterval.aPages[0]), true, "First page should be an Array of two pages");
 			assert.strictEqual(this.oResponsiveSplitter.getRootPaneContainer()._oSplitter.getAssociatedContentAreas().length, 2, "The internal Splitter should have 2 contentAreas");
 			done();
-		}.bind(this), 500 /* IE needs more time to render properly */);
+		}.bind(this), 500 /* IE needs more time to render properly */);// TODO remove after 1.62 version
 	});
 
 	QUnit.test("One demand true and one demand false panes first in range", function (assert) {
@@ -115,7 +115,7 @@
 			assert.strictEqual(this.oResponsiveSplitter.$().find(".sapUiResponsiveSplitterPaginator").css("height"), "0px", "Paginator's height should be 0");
 			assert.strictEqual(this.oResponsiveSplitter.getRootPaneContainer()._oSplitter.getAssociatedContentAreas().length, 1, "The internal Splitter should have 2 contentAreas");
 			done();
-		}.bind(this), 500 /* IE needs more time to render properly */);
+		}.bind(this), 500 /* IE needs more time to render properly */);// TODO remove after 1.62 version
 	});
 
 	QUnit.test("Demand true panes first in range second not", function (assert) {
@@ -131,7 +131,7 @@
 			assert.strictEqual(this.oResponsiveSplitter.$().find(".sapUiResponsiveSplitterPaginatorButtons > div").length, 2, "Two buttons should be rendered");
 			assert.strictEqual(jQuery(this.oResponsiveSplitter.$().find(".sapUiResponsiveSplitterPaginatorButtons > div")[0]).hasClass("sapUiResponsiveSplitterPaginatorSelectedButton"), true, "The first button should be selected");
 			done();
-		}.bind(this), 500 /* IE needs more time to render properly */);
+		}.bind(this), 500 /* IE needs more time to render properly */);// TODO remove after 1.62 version
 	});
 
 	QUnit.test("Demand false panes both not in range second default", function (assert) {
@@ -334,10 +334,9 @@
 
 			this.oResourceBundle = sap.ui.getCore().getLibraryResourceBundle("sap.ui.layout");
 			sinon.stub(this.oResourceBundle, "getText")
-				.withArgs("RESPONSIVE_SPLITTER_RESIZE").returns("Resize split screen between pane")
-				.withArgs("RESPONSIVE_SPLITTER_PANES", [1, 2]).returns("1 and pane 2")
-				.withArgs("RESPONSIVE_SPLITTER_PANES", [2, 3]).returns("2 and pane 3")
-				.withArgs("RESPONSIVE_SPLITTER_PANES", ["3.1", "3.2"]).returns("3.1 and pane 3.2")
+				.withArgs("RESPONSIVE_SPLITTER_RESIZE", [1, 2]).returns("Resize between pane 1 and pane 2")
+				.withArgs("RESPONSIVE_SPLITTER_RESIZE", [2, 3]).returns("Resize between pane 2 and pane 3")
+				.withArgs("RESPONSIVE_SPLITTER_RESIZE", ["3.1", "3.2"]).returns("Resize between pane 3.1 and pane 3.2")
 				.withArgs("RESPONSIVE_SPLITTER_HOME").returns("Go to split screen")
 				.withArgs("RESPONSIVE_SPLITTER_AND").returns("and")
 				.withArgs("RESPONSIVE_SPLITTER_GOTO").returns("Go to screen")
@@ -355,9 +354,9 @@
 	QUnit.test("SplitterBars' tooltip", function (assert) {
 		var aSplitterBars = this.oResponsiveSplitter.$().find(".sapUiLoSplitterBar");
 
-		assert.strictEqual(aSplitterBars[0].getAttribute("title"), "Resize split screen between pane 1 and pane 2");
-		assert.strictEqual(aSplitterBars[1].getAttribute("title"), "Resize split screen between pane 2 and pane 3");
-		assert.strictEqual(aSplitterBars[2].getAttribute("title"), "Resize split screen between pane 3.1 and pane 3.2");
+		assert.strictEqual(aSplitterBars[0].getAttribute("title"), "Resize between pane 1 and pane 2");
+		assert.strictEqual(aSplitterBars[1].getAttribute("title"), "Resize between pane 2 and pane 3");
+		assert.strictEqual(aSplitterBars[2].getAttribute("title"), "Resize between pane 3.1 and pane 3.2");
 	});
 
 	QUnit.test("Paginator button's tooltip", function (assert) {

@@ -10,8 +10,8 @@ sap.ui.define([
 	"sap/ui/test/matchers/AggregationContainsPropertyEqual",
 	"sap/ui/test/matchers/AggregationLengthEquals",
 	"cp/opa/test/env/integration/matchers/SwatchColor",
-	"sap/base/events/KeyCodes"
-], function (Opa5, opaTest, Press, EnterText, SwatchColorPress, PropertyStrictEquals, AggregationContainsPropertyEqual, AggregationLengthEquals, SwatchColor, KeyCodes) {
+	"jquery.sap.keycodes"
+], function (Opa5, opaTest, Press, EnterText, SwatchColorPress, PropertyStrictEquals, AggregationContainsPropertyEqual, AggregationLengthEquals, SwatchColor /*, jquerySapKeyCodes */) {
 	"use strict";
 
 	var COMPONENT_VIEW_PREFFIX = "__component0---myHomeView--",
@@ -140,6 +140,7 @@ sap.ui.define([
 			iPressKeyOnAColorSwatch: function (sColor, iKey) {
 				return this.waitFor({
 					searchOpenDialogs: true,
+					controlType: "sap.m.ColorPalette",
 					actions: function (oColor) {
 						Opa5.getUtils().triggerKeydown(oColor, iKey);
 						Opa5.getUtils().triggerKeyup(oColor, iKey);
@@ -264,6 +265,17 @@ sap.ui.define([
 					},
 					errorMessage: "Element with id='" + sTarget + "' was NOT found."
 				});
+			},
+			documentActiveSwatchShouldBe: function (sColorName) {
+				return this.waitFor({
+					success: function () {
+						var oComplexControlDefaultsColorPalettePopover = sap.ui.getCore().byId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_ID),
+							oColor = oComplexControlDefaultsColorPalettePopover.$().find('[data-sap-ui-color="' + sColorName + '"]').get(0);
+
+						Opa5.assert.strictEqual(document.activeElement, oColor, "Swatch with color: " + sColorName + " was focused");
+					},
+					errorMessage: "Swatch with color='" + sColorName + "' was NOT found."
+				});
 			}
 		})
 	});
@@ -294,7 +306,7 @@ sap.ui.define([
 				opaTest("Cancel new color selection using [ESCAPE] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_ID, KeyCodes.ESCAPE);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_ID, jQuery.sap.KeyCodes.ESCAPE);
 					//Adding COMPONENT_VIEW_SUFFIX is required here because of the nature of UI5 component to add ids
 					Then.complexControlDefaultsColorPalettePopoverShouldBeClosedAndFocusShouldBeOn(COMPONENT_VIEW_PREFFIX + COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_OPENER_ID);
 					//Destroy component
@@ -322,7 +334,7 @@ sap.ui.define([
 				opaTest("Select the default color using the [SPACE] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, KeyCodes.SPACE);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, jQuery.sap.KeyCodes.SPACE);
 					Then.colorSelectEventParamsShouldMatch({
 						defaultAction: true,
 						value: "green"
@@ -334,7 +346,7 @@ sap.ui.define([
 				opaTest("Select the default color using the [ENTER] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, KeyCodes.ENTER);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, jQuery.sap.KeyCodes.ENTER);
 					Then.colorSelectEventParamsShouldMatch({
 						defaultAction: true,
 						value: "green"
@@ -346,7 +358,7 @@ sap.ui.define([
 				opaTest("Select the default color using the [TAB] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, KeyCodes.TAB);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, jQuery.sap.KeyCodes.TAB);
 					Then.colorSelectEventParamsShouldMatch({
 						defaultAction: true,
 						value: "green"
@@ -372,7 +384,7 @@ sap.ui.define([
 				opaTest("Select a predefined color using the [SPACE] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnAColorSwatch("darkorange", KeyCodes.SPACE);
+					When.iPressKeyOnAColorSwatch("darkorange", jQuery.sap.KeyCodes.SPACE);
 					Then.colorSelectEventParamsShouldMatch({
 						defaultAction: false,
 						value: "darkorange"
@@ -384,7 +396,7 @@ sap.ui.define([
 				opaTest("Select a predefined color using the [ENTER] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnAColorSwatch("indianred", KeyCodes.ENTER);
+					When.iPressKeyOnAColorSwatch("indianred", jQuery.sap.KeyCodes.ENTER);
 					Then.colorSelectEventParamsShouldMatch({
 						defaultAction: false,
 						value: "indianred"
@@ -396,7 +408,7 @@ sap.ui.define([
 				opaTest("Select a predefined color using the [TAB] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnAColorSwatch("darkmagenta", KeyCodes.TAB);
+					When.iPressKeyOnAColorSwatch("darkmagenta", jQuery.sap.KeyCodes.TAB);
 					Then.colorSelectEventParamsShouldMatch({
 						defaultAction: false,
 						value: "darkmagenta"
@@ -427,13 +439,13 @@ sap.ui.define([
 				opaTest("More colors...: Open the 'ColorPicker' using [ENTER] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, KeyCodes.ENTER);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, jQuery.sap.KeyCodes.ENTER);
 					Then.complexControlDefaultsColorPalettePopoverColorPickerShouldBeOpen();
 				});
 
 				//Assume opened ColorPicker from previous test
 				opaTest("ColorPicker: Cancel new color selection using [ESCAPE] key", function (Given, When, Then) {
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_COLORPICKER_ID, KeyCodes.ESCAPE);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_COLORPICKER_ID, jQuery.sap.KeyCodes.ESCAPE);
 					Then.complexControlDefaultsColorPalettePopoverShouldBeClosedAndFocusShouldBeOn(COMPONENT_VIEW_PREFFIX + COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_OPENER_ID);
 				});
 
@@ -441,7 +453,7 @@ sap.ui.define([
 				opaTest("More colors...:Open the 'ColorPicker' using [SPACE] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, KeyCodes.SPACE);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, jQuery.sap.KeyCodes.SPACE);
 					Then.complexControlDefaultsColorPalettePopoverColorPickerShouldBeOpen();
 				});
 
@@ -462,7 +474,7 @@ sap.ui.define([
 				opaTest("More colors...: Open the 'ColorPicker' using [TAB] key", function (Given, When, Then) {
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, KeyCodes.TAB);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, jQuery.sap.KeyCodes.TAB);
 					Then.complexControlDefaultsColorPalettePopoverShouldBeClosedAndFocusShouldBeOn(COMPONENT_VIEW_PREFFIX + COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_OPENER_ID);
 				});
 
@@ -473,7 +485,7 @@ sap.ui.define([
 					//This is the actual reason of the test to select a color using the HEX format (#f2f2f2) as an input and expects the output of the same color in in RGB format rgb(242,242,242)
 					When.iOpenComplexControlDefaultsColorPalettePopover();
 					Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
-					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, KeyCodes.ENTER);
+					When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, jQuery.sap.KeyCodes.ENTER);
 					//Expect the old valid color to be preserved when confirm invalid value
 					When.iChangeTheColorPickerColor("invalidcolor").and.iConfirmNewColorSelection();
 					Then.colorSelectEventParamsShouldMatch({
@@ -483,6 +495,68 @@ sap.ui.define([
 					Then.complexControlDefaultsColorPalettePopoverShouldBeClosedAndFocusShouldBeOn(COMPONENT_VIEW_PREFFIX + COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_OPENER_ID);
 					Given.iTeardownMyUIComponent();
 				});
+			});
+		});
+
+		QUnit.module("Keyboard navigation", function () {
+			opaTest("Backward", function (Given, When, Then) {
+				Given.iStartMyComponent("cp.opa.test.app");
+				When.iOpenComplexControlDefaultsColorPalettePopover();
+				Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
+
+				When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, jQuery.sap.KeyCodes.ARROW_UP);
+				Then.documentActiveElementShouldBe(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID);
+
+				When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID, jQuery.sap.KeyCodes.ARROW_UP);
+				Then.documentActiveSwatchShouldBe("white");
+
+				When.iPressKeyOnAColorSwatch("white", jQuery.sap.KeyCodes.ARROW_LEFT);
+				Then.documentActiveSwatchShouldBe("azure");
+
+				When.iPressKeyOnAColorSwatch("azure", jQuery.sap.KeyCodes.ARROW_UP);
+				Then.documentActiveSwatchShouldBe("cornflowerblue");
+
+				When.iPressKeyOnAColorSwatch("cornflowerblue", jQuery.sap.KeyCodes.HOME);
+				Then.documentActiveSwatchShouldBe("gold");
+
+				When.iPressKeyOnAColorSwatch("gold", jQuery.sap.KeyCodes.ARROW_UP);
+				Then.documentActiveElementShouldBe(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID);
+
+				// Cleanup
+				Given.iTeardownMyUIComponent();
+			});
+
+			opaTest("Forward", function (Given, When, Then) {
+				Given.iStartMyComponent("cp.opa.test.app");
+				When.iOpenComplexControlDefaultsColorPalettePopover();
+				Then.complexControlDefaultsColorPalettePopoverShouldBeOpen();
+
+				When.iPressKeyOnATargetId(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_DEFAULTCOLOR_ID, jQuery.sap.KeyCodes.ARROW_DOWN);
+				Then.documentActiveSwatchShouldBe("gold");
+
+				When.iPressKeyOnAColorSwatch("gold", jQuery.sap.KeyCodes.ARROW_DOWN);
+				Then.documentActiveSwatchShouldBe("deepskyblue");
+
+				When.iPressKeyOnAColorSwatch("deepskyblue", jQuery.sap.KeyCodes.ARROW_DOWN);
+				Then.documentActiveSwatchShouldBe("white");
+
+				When.iPressKeyOnAColorSwatch("white", jQuery.sap.KeyCodes.ARROW_DOWN);
+				Then.documentActiveSwatchShouldBe("darkorange"); // goes to the next column
+
+				When.iPressKeyOnAColorSwatch("darkorange", jQuery.sap.KeyCodes.ARROW_RIGHT);
+				Then.documentActiveSwatchShouldBe("indianred"); // goes to the next column
+
+				When.iPressKeyOnAColorSwatch("indianred", jQuery.sap.KeyCodes.END);
+				Then.documentActiveSwatchShouldBe("cornflowerblue"); // last item in the first row
+
+				When.iPressKeyOnAColorSwatch("cornflowerblue", jQuery.sap.KeyCodes.END);
+				Then.documentActiveSwatchShouldBe("black"); // last item in the first row
+
+				When.iPressKeyOnAColorSwatch("black", jQuery.sap.KeyCodes.END);
+				Then.documentActiveElementShouldBe(COMPLEX_CONTROLDEFAULTS_COLORPALETTEPOPOVER_MORECOLORS_ID);
+
+				// Cleanup
+				Given.iTeardownMyUIComponent();
 			});
 		});
 	});

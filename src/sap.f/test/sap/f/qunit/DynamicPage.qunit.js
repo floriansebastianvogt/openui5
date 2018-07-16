@@ -1,6 +1,6 @@
 /* global QUnit,sinon*/
 
-(function ($, QUnit, sinon, DynamicPage, DynamicPageTitle, DynamicPageHeader) {
+(function ($, QUnit, sinon, DynamicPage, DynamicPageTitle, DynamicPageHeader, Device) {
 	"use strict";
 
 	sinon.config.useFakeTimers = false;
@@ -767,6 +767,36 @@
 		assert.ok(sFlexBasisAfter > iFlexBasisBefore + 50, "Flex-basis increased to show the new text");
 	});
 
+	QUnit.test("DynamicPage Title - backgroundDesign", function(assert) {
+		var $oDomRef = this.oDynamicPageTitle.$();
+
+		// assert
+		assert.equal(this.oDynamicPageTitle.getBackgroundDesign(), null, "Default value of backgroundDesign property = null");
+
+		// act
+		this.oDynamicPageTitle.setBackgroundDesign("Solid");
+
+		// assert
+		assert.ok($oDomRef.hasClass("sapFDynamicPageTitleSolid"), "Should have sapFDynamicPageTitleSolid class");
+		assert.strictEqual(this.oDynamicPageTitle.getBackgroundDesign(), "Solid", "Should have backgroundDesign property = 'Solid'");
+
+		// act
+		this.oDynamicPageTitle.setBackgroundDesign("Transparent");
+
+		// assert
+		assert.notOk($oDomRef.hasClass("sapFDynamicPageTitleSolid"), "Should not have sapFDynamicPageTitleSolid class");
+		assert.ok($oDomRef.hasClass("sapFDynamicPageTitleTransparent"), "Should have sapFDynamicPageTitleTransparent class");
+		assert.strictEqual(this.oDynamicPageTitle.getBackgroundDesign(), "Transparent", "Should have backgroundDesign property = 'Transparent'");
+
+		// act
+		this.oDynamicPageTitle.setBackgroundDesign("Translucent");
+
+		// assert
+		assert.notOk($oDomRef.hasClass("sapFDynamicPageTitleTransparent"), "Should not have sapFDynamicPageTitleTransparent class");
+		assert.ok($oDomRef.hasClass("sapFDynamicPageTitleTranslucent"), "Should have sapFDynamicPageTitleTranslucent class");
+		assert.strictEqual(this.oDynamicPageTitle.getBackgroundDesign(), "Translucent", "Should have backgroundDesign property = 'Translucent'");
+	});
+
 
 	/* --------------------------- DynamicPage Header API ---------------------------------- */
 	QUnit.module("DynamicPage Header - API ", {
@@ -946,6 +976,37 @@
 		assert.equal($oCollapseButton.hasClass("sapUiHidden"), true, "Header is collapsed, the Collapse button is not visible");
 	});
 
+	QUnit.test("DynamicPage Header - backgroundDesign", function(assert) {
+		var oDynamicPageHeader = this.oDynamicPage.getHeader(),
+			$oDomRef = oDynamicPageHeader.$();
+
+		// assert
+		assert.equal(oDynamicPageHeader.getBackgroundDesign(), null, "Default value of backgroundDesign property = null");
+
+		// act
+		oDynamicPageHeader.setBackgroundDesign("Solid");
+
+		// assert
+		assert.ok($oDomRef.hasClass("sapFDynamicPageHeaderSolid"), "Should have sapFDynamicPageHeaderSolid class");
+		assert.strictEqual(oDynamicPageHeader.getBackgroundDesign(), "Solid", "Should have backgroundDesign property = 'Solid'");
+
+		// act
+		oDynamicPageHeader.setBackgroundDesign("Transparent");
+
+		// assert
+		assert.notOk($oDomRef.hasClass("sapFDynamicPageHeaderSolid"), "Should not have sapFDynamicPageHeaderSolid class");
+		assert.ok($oDomRef.hasClass("sapFDynamicPageHeaderTransparent"), "Should have sapFDynamicPageHeaderTransparent class");
+		assert.strictEqual(oDynamicPageHeader.getBackgroundDesign(), "Transparent", "Should have backgroundDesign property = 'Transparent'");
+
+		// act
+		oDynamicPageHeader.setBackgroundDesign("Translucent");
+
+		// assert
+		assert.notOk($oDomRef.hasClass("sapFDynamicPageHeaderTransparent"), "Should not have sapFDynamicPageHeaderTransparent class");
+		assert.ok($oDomRef.hasClass("sapFDynamicPageHeaderTranslucent"), "Should have sapFDynamicPageHeaderTranslucent class");
+		assert.strictEqual(oDynamicPageHeader.getBackgroundDesign(), "Translucent", "Should have backgroundDesign property = 'Translucent'");
+	});
+
 	/* --------------------------- DynamicPage Rendering ---------------------------------- */
 	QUnit.module("DynamicPage - Rendering", {
 		beforeEach: function () {
@@ -1098,9 +1159,16 @@
 	QUnit.test("DynamicPage Pin button is hidden", function (assert) {
 		var $pinButton = this.oDynamicPageWithPreserveHeaderStateOnScroll.getHeader().getAggregation("_pinButton").$();
 
+		// assert
 		assert.ok($pinButton.hasClass("sapUiHidden"), "The DynamicPage Header Pin Button not rendered");
-	});
 
+		// act
+		this.oDynamicPageWithPreserveHeaderStateOnScroll._snapHeader();
+		this.oDynamicPageWithPreserveHeaderStateOnScroll._expandHeader();
+
+		// assert
+		assert.ok($pinButton.hasClass("sapUiHidden"), "The DynamicPage Header Pin Button is hidden");
+	});
 
 	QUnit.module("DynamicPage - Rendering - No Header", {
 		beforeEach: function () {
@@ -1806,20 +1874,23 @@
 	});
 
 	QUnit.test("DynamicPage On Snap Header when not enough scrollHeight to snap with scroll and scrollTop > 0", function (assert) {
+		/* TODO remove after 1.62 version */
+		var bIsIE = Device.browser.internet_explorer,
+			sHeight = this.oDynamicPage._bMSBrowser  ? "300px" : "400px"; // due to different MS browsers calculation
 
 		this.oDynamicPage.setContent(oFactory.getContent(1)); // not enough content to snap on scroll
 		// Arrange
 		oUtil.renderObject(this.oDynamicPage);
 
 		// Arrange state:
-		this.oDynamicPage.$().height("400px"); // ensure not enough scrollHeight to snap with scrolling
+		this.oDynamicPage.$().height(sHeight); // ensure not enough scrollHeight to snap with scrolling
 		this.oDynamicPage.$().width("300px");
 		this.oDynamicPage._setScrollPosition(10); // scrollTop > 0
 
 		// Assert state arranged as expected:
 		assert.strictEqual(this.oDynamicPage.getHeaderExpanded(), true, "header is expanded");
 		assert.ok(!this.oDynamicPage._canSnapHeaderOnScroll(), "not enough scrollHeight to snap with scroll");
-		assert.ok(this.oDynamicPage._needsVerticalScrollBar(), "enough scrollHeight to scroll");
+		assert.equal(this.oDynamicPage._needsVerticalScrollBar(), true, "enough scrollHeight to scroll");
 
 		// Act: toggle title to snap the header
 		this.oDynamicPage._titleExpandCollapseWhenAllowed();
@@ -1827,7 +1898,8 @@
 		// Assert context changed as expected:
 		assert.strictEqual(this.oDynamicPage.getHeaderExpanded(), false, "header is snapped");
 		assert.ok(!this.oDynamicPage._needsVerticalScrollBar(), "not enough scrollHeight to scroll");//because header was hidden during snap
-		assert.equal(this.oDynamicPage._getScrollPosition(), this.oDynamicPage._bMSBrowser ? 1 : 0); // because no more scrolled-out content
+		/* TODO remove after 1.62 version */
+		assert.equal(this.oDynamicPage._getScrollPosition(), bIsIE ? 1 : 0); // because no more scrolled-out content
 
 		// explicitly call the onscroll listener (to save a timeout in the test):
 		this.oDynamicPage._toggleHeaderOnScroll({target: {scrollTop: 0}});
@@ -2413,7 +2485,9 @@
 			},
 			iSmallHeaderHeight = 700,
 			iLargeHeaderHeight = 1100,
-			iPageHeight = 1000;
+			iPageHeight = 1000,
+			iNoHeaderHeight = 0,
+			iNoPageHeight = 0;
 
 		// act (1) -  Header`s height is smaller than the Page`s height.
 		fnStubConfig(iSmallHeaderHeight, iPageHeight);
@@ -2430,6 +2504,17 @@
 		// assert
 		assert.strictEqual(this.oDynamicPage._headerBiggerThanAllowedToBeExpandedInTitleArea(), true,
 			"DynamicPage Header is bigger than allowed to be expanded in the non-scrollable area");
+
+		oSandBox.restore();
+
+		// act (3) - Header`s height and Page`s height are 0.
+		fnStubConfig(iNoHeaderHeight, iNoPageHeight);
+
+		// assert
+		assert.strictEqual(this.oDynamicPage._headerBiggerThanAllowedToBeExpandedInTitleArea(), false,
+			"When Header is not on the page return false");
+
+		oSandBox.restore();
 	});
 
 	QUnit.test("DynamicPage _headerBiggerThanAllowedToBeExpandedInTitleArea() returns the correct value on mobile", function (assert) {
@@ -2441,7 +2526,9 @@
 			},
 			iSmallHeaderHeight = 100,
 			iLargeHeaderHeight = 400,
-			iPageHeight = 1000;
+			iPageHeight = 1000,
+			iNoHeaderHeight = 0,
+			iNoPageHeight = 0;
 
 		// act (1) -  Header`s height is smaller than the Page`s height.
 		oUtil.toMobileMode();
@@ -2460,6 +2547,17 @@
 		assert.strictEqual(this.oDynamicPage._headerBiggerThanAllowedToBeExpandedInTitleArea(), true,
 			"DynamicPage Header is bigger than allowed to be expanded in the non-scrollable area");
 
+		oSandBox.restore();
+
+		// act (3) - Header`s height and Page`s height are 0.
+		fnStubConfig(iNoHeaderHeight, iNoPageHeight);
+
+		// assert
+		assert.strictEqual(this.oDynamicPage._headerBiggerThanAllowedToBeExpandedInTitleArea(), false,
+			"When Header is not on the page return false");
+
+		// cleanup
+		oSandBox.restore();
 		oUtil.toDesktopMode();
 	});
 
@@ -3261,4 +3359,4 @@
 		assert.equal(parseFloat(oContent.css("flex-shrink")).toFixed(1), 2, "Content shrink factor is correct");
 		assert.equal(parseFloat(oActions.css("flex-shrink")).toFixed(1), 4, "Actions shrink factor is correct");
 	});
-}(jQuery, QUnit, sinon, sap.f.DynamicPage, sap.f.DynamicPageTitle, sap.f.DynamicPageHeader));
+}(jQuery, QUnit, sinon, sap.f.DynamicPage, sap.f.DynamicPageTitle, sap.f.DynamicPageHeader, sap.ui.Device));

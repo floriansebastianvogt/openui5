@@ -4,12 +4,18 @@
 
 sap.ui.define([
 	"./BaseTreeModifier",
+	"sap/base/util/ObjectPath",
+	"sap/ui/util/XMLHelper",
 	"jquery.sap.global",
+	"sap/base/util/merge",
 	"sap/ui/core/Fragment", // needed to have sap.ui.xmlfragment
 	"jquery.sap.xml" // needed to have jQuery.sap.parseXML
 ], function (
 	BaseTreeModifier,
-	jQuery
+	ObjectPath,
+	XMLHelper,
+	jQuery,
+	merge
 	/* other jQuery.sap dependencies */
 ) {
 
@@ -47,7 +53,7 @@ sap.ui.define([
 		setStashed: function (oControl, bStashed) {
 			if (oControl.setStashed) {
 				if (oControl.setVisible) {
-					oControl.setVisible(!bStashed);
+					this.setVisible(oControl, !bStashed);
 				}
 				// check if the control is stashed and bStashed is false
 				if (oControl.getStashed() === true && bStashed === false) {
@@ -122,8 +128,9 @@ sap.ui.define([
 				throw new Error("Can't create a control with duplicated id " + oSelector);
 			}
 
+			//TODO: global jquery call found
 			jQuery.sap.require(sClassName); //ensure class is there
-			var ClassObject = jQuery.sap.getObject(sClassName);
+			var ClassObject = ObjectPath.get(sClassName);
 			var sId = this.getControlIdBySelector(oSelector, oAppComponent);
 			return new ClassObject(sId, mSettings);
 		},
@@ -325,7 +332,7 @@ sap.ui.define([
 		 * @returns {sap.ui.core.Control[]} Returns an array with the controls of the fragment
 		 */
 		instantiateFragment: function(sFragment, sNamespace, oView) {
-			var oFragment = jQuery.sap.parseXML(sFragment);
+			var oFragment = XMLHelper.parse(sFragment);
 			oFragment = this._checkAndPrefixIdsInFragment(oFragment, sNamespace);
 
 			var aNewControls;
@@ -352,8 +359,7 @@ sap.ui.define([
 		}
 	};
 
-	return jQuery.sap.extend(
-		true /* deep extend */,
+	return merge(
 		{} /* target object, to avoid changing of original modifier */,
 		BaseTreeModifier,
 		JsControlTreeModifier

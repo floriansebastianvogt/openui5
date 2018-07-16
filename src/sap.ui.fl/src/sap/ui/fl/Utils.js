@@ -850,7 +850,8 @@ sap.ui.define([
 			var oUshellContainer = Utils.getUshellContainer();
 			if (oUshellContainer) {
 				var oURLParser = oUshellContainer.getService("URLParsing");
-				return oURLParser.parseShellHash(oURLParser.getHash(window.location.href));
+				var oParsedHash = oURLParser.parseShellHash(oURLParser.getHash(window.location.href));
+				return oParsedHash ? oParsedHash : { };
 			}
 			return { };
 		},
@@ -1031,6 +1032,70 @@ sap.ui.define([
 				this.log.warning("No Manifest received.");
 			}
 			return sVersion;
+		},
+
+		/**
+		 * Returns the uri of the main service specified in the app manifest
+		 *
+		 * @param {object} oManifest - Manifest of the component
+		 * @returns {string} Returns the uri if the manifest is available, otherwise an empty string
+		 * @public
+		 */
+		getODataServiceUriFromManifest: function (oManifest) {
+			var sUri = "";
+			if (oManifest){
+				var oSapApp = (oManifest.getEntry) ? oManifest.getEntry("sap.app") : oManifest["sap.app"];
+				if (oSapApp && oSapApp.dataSources && oSapApp.dataSources.mainService && oSapApp.dataSources.mainService.uri){
+					sUri = oSapApp.dataSources.mainService.uri;
+				}
+			} else {
+				this.log.warning("No Manifest received.");
+			}
+			return sUri;
+		},
+
+		/**
+		 * Checks if the application version has the correct format: "major.minor.patch".
+		 *
+		 * @param {string} sVersion - Version of application
+		 * @returns {boolean} true if the format is correct, otherwise false
+		 * @public
+		 */
+		isCorrectAppVersionFormat: function (sVersion) {
+			// remove all whitespaces
+			sVersion = sVersion.replace(/\s/g, "");
+
+			// get version without snapshot
+			// we need to run the regex twice to avoid that version 1-2-3-SNAPSHOT will result in version 1.
+			var oRegexp1 = /\b\d{1,5}(.\d{1,5}){0,2}/g;
+			var oRegexp2 = /\b\d{1,5}(\.\d{1,5}){0,2}/g;
+			var nLength = sVersion.match(oRegexp1) ? sVersion.match(oRegexp1)[0].length : 0;
+			var nLenghtWithDot = sVersion.match(oRegexp2) ? sVersion.match(oRegexp2)[0].length : 0;
+
+			if (nLenghtWithDot < 1 || nLenghtWithDot != nLength){
+				return false;
+			}
+
+			//if the character after the version is also a number or a dot, it should also be a format error
+			if (nLenghtWithDot && sVersion != sVersion.substr(0,nLenghtWithDot)){
+				var cNextCharacter = sVersion.substr(nLenghtWithDot, 1);
+				var oRegexp = /^[0-9.]$/;
+				if (oRegexp.test(cNextCharacter)){
+					return false;
+				}
+			}
+
+			// split into number-parts and check if there are max. three parts
+			var aVersionParts = sVersion.substr(0,nLenghtWithDot).split(".");
+			if (aVersionParts.length > 3){
+				return false;
+			}
+
+			// 5 digits maximum per part
+			if (!aVersionParts.every(function(sPart){return sPart.length <= 5;})){
+				return false;
+			}
+			return true;
 		},
 
 		/**

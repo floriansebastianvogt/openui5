@@ -3,17 +3,25 @@
  */
 
 sap.ui.define([
-	'jquery.sap.global',
 	'./library',
 	'sap/ui/core/Control',
 	'sap/m/GenericTile',
 	'sap/ui/Device',
 	'sap/ui/core/Icon',
 	'./SlideTileRenderer',
-	'jquery.sap.events',
-	'jquery.sap.keycodes'
+	"sap/ui/events/KeyCodes",
+	"sap/ui/events/PseudoEvents"
 ],
-	function(jQuery, library, Control, GenericTile, Device, Icon, SlideTileRenderer) {
+	function(
+		library,
+		Control,
+		GenericTile,
+		Device,
+		Icon,
+		SlideTileRenderer,
+		KeyCodes,
+		PseudoEvents
+	) {
 	"use strict";
 
 	var TileSizeBehavior = library.TileSizeBehavior;
@@ -240,7 +248,7 @@ sap.ui.define([
 	 */
 	SlideTile.prototype.onkeydown = function (oEvent) {
 		if (this.getScope() === library.GenericTileScope.Display) {
-			if (jQuery.sap.PseudoEvents.sapenter.fnCheck(oEvent)) {
+			if (PseudoEvents.events.sapenter.fnCheck(oEvent)) {
 				var oGenericTile = this.getTiles()[this._iCurrentTile];
 				oGenericTile.onkeydown(oEvent);
 			}
@@ -255,25 +263,25 @@ sap.ui.define([
 	SlideTile.prototype.onkeyup = function (oEvent) {
 		var oParams;
 		if (this.getScope() === library.GenericTileScope.Display) {
-			if (jQuery.sap.PseudoEvents.sapenter.fnCheck(oEvent)) {
+			if (PseudoEvents.events.sapenter.fnCheck(oEvent)) {
 				var oGenericTile = this.getTiles()[this._iCurrentTile];
 				oGenericTile.onkeyup(oEvent);
 				return;
 			}
-			if (jQuery.sap.PseudoEvents.sapspace.fnCheck(oEvent)) {
+			if (PseudoEvents.events.sapspace.fnCheck(oEvent)) {
 				this._toggleAnimation();
 			}
-			if (oEvent.which === jQuery.sap.KeyCodes.B && this._bAnimationPause) {
+			if (oEvent.which === KeyCodes.B && this._bAnimationPause) {
 				this._scrollToNextTile(true, true);
 			}
-			if (oEvent.which === jQuery.sap.KeyCodes.F && this._bAnimationPause) {
+			if (oEvent.which === KeyCodes.F && this._bAnimationPause) {
 				this._scrollToNextTile(true, false);
 			}
 		} else if (this.getScope() === library.GenericTileScope.Actions) {
-			if (jQuery.sap.PseudoEvents.sapselect.fnCheck(oEvent)) {
+			if (PseudoEvents.events.sapselect.fnCheck(oEvent)) {
 				this.firePress(this._getEventParams(oEvent));
 				oEvent.preventDefault();
-			} else if (jQuery.sap.PseudoEvents.sapdelete.fnCheck(oEvent) || jQuery.sap.PseudoEvents.sapbackspace.fnCheck(oEvent)) {
+			} else if (PseudoEvents.events.sapdelete.fnCheck(oEvent) || PseudoEvents.events.sapbackspace.fnCheck(oEvent)) {
 				oParams = {
 					scope: this.getScope(),
 					action: GenericTile._Action.Remove,

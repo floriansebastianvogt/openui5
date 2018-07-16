@@ -16,16 +16,16 @@ sap.ui.require([
 	"sap/ui/model/odata/v4/ODataBinding",
 	"sap/ui/model/odata/v4/ODataModel",
 	"sap/ui/model/odata/v4/ODataPropertyBinding",
-	"sap/ui/test/TestUtils"
+	"sap/ui/test/TestUtils",
+	"sap/base/Log"
 ], function (jQuery, ManagedObject, SyncPromise, BindingMode, ChangeReason, PropertyBinding,
 		TypeString, Context, _Cache, _GroupLock, _Helper, asODataBinding, ODataModel,
-		ODataPropertyBinding, TestUtils) {
+		ODataPropertyBinding, TestUtils, Log) {
 	/*global QUnit, sinon */
 	/*eslint max-nested-callbacks: 0, no-warning-comments: 0 */
 	"use strict";
 
-	var aAllowedBindingParameters = ["$$groupId"],
-		sClassName = "sap.ui.model.odata.v4.ODataPropertyBinding",
+	var sClassName = "sap.ui.model.odata.v4.ODataPropertyBinding",
 		sServiceUrl = "/sap/opu/odata4/sap/zui5_testv4/default/sap/zui5_epm_sample/0002/",
 		TestControl = ManagedObject.extend("test.sap.ui.model.odata.v4.ODataPropertyBinding", {
 			metadata : {
@@ -40,7 +40,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.model.odata.v4.ODataPropertyBinding", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 
@@ -335,12 +335,16 @@ sap.ui.require([
 	//*********************************************************************************************
 	[false, true].forEach(function (bForceUpdate) {
 		QUnit.test("checkUpdate(" + bForceUpdate + "): unchanged", function (assert) {
+			var that = this;
+
 			return this.createTextBinding(assert, 2).then(function (oBinding) {
 				var bGotChangeEvent = false;
 
 				oBinding.attachChange(function () {
 					bGotChangeEvent = true;
 				});
+				// checkDataState is called independently of bForceUpdate
+				that.mock(oBinding).expects("checkDataState").withExactArgs();
 
 				// code under test
 				oBinding.checkUpdate(bForceUpdate).then(function () {
@@ -432,6 +436,8 @@ sap.ui.require([
 		this.mock(oModel.getMetaModel()).expects("fetchUI5Type")
 			.withExactArgs("/.../relative")
 			.returns(SyncPromise.resolve());
+		// checkDataState is called only once even if checkUpdate is called twice
+		this.mock(oBinding).expects("checkDataState").withExactArgs();
 
 		// code under test
 		oPromise0 = oBinding.checkUpdate(true);
@@ -977,38 +983,23 @@ sap.ui.require([
 
 	//*********************************************************************************************
 	QUnit.test("events", function (assert) {
-		var mParams = {},
-			oMock = this.mock(PropertyBinding.prototype),
-			oPropertyBinding,
+		var oBinding,
+			oBindingMock = this.mock(PropertyBinding.prototype),
+			mEventParameters = {},
 			oReturn = {};
 
-		oMock.expects("attachEvent")
-			.withExactArgs("AggregatedDataStateChange", sinon.match.same(mParams))
-			.returns(oReturn);
-		oMock.expects("attachEvent").withExactArgs("change", sinon.match.same(mParams))
-			.returns(oReturn);
-		oMock.expects("attachEvent").withExactArgs("dataReceived", sinon.match.same(mParams))
-			.returns(oReturn);
-		oMock.expects("attachEvent").withExactArgs("dataRequested", sinon.match.same(mParams))
-			.returns(oReturn);
-		oMock.expects("attachEvent").withExactArgs("DataStateChange", sinon.match.same(mParams))
-			.returns(oReturn);
+		oBinding = this.oModel.bindProperty("Name");
 
-		oPropertyBinding = this.oModel.bindProperty("Name");
+		["AggregatedDataStateChange", "change", "dataReceived", "dataRequested", "DataStateChange"]
+		.forEach(function (sEvent) {
+			oBindingMock.expects("attachEvent")
+				.withExactArgs(sEvent, sinon.match.same(mEventParameters)).returns(oReturn);
 
-		assert.strictEqual(oPropertyBinding.attachEvent("AggregatedDataStateChange", mParams),
-			oReturn);
-		assert.strictEqual(oPropertyBinding.attachEvent("change", mParams),
-			oReturn);
-		assert.strictEqual(oPropertyBinding.attachEvent("dataReceived", mParams),
-			oReturn);
-		assert.strictEqual(oPropertyBinding.attachEvent("dataRequested", mParams),
-			oReturn);
-		assert.strictEqual(oPropertyBinding.attachEvent("DataStateChange", mParams),
-			oReturn);
+			assert.strictEqual(oBinding.attachEvent(sEvent, mEventParameters), oReturn);
+		});
 
 		assert.throws(function () {
-			oPropertyBinding.attachEvent("unsupportedEvent");
+			oBinding.attachEvent("unsupportedEvent");
 		}, new Error("Unsupported event 'unsupportedEvent': v4.ODataPropertyBinding#attachEvent"));
 	});
 
@@ -1044,25 +1035,18 @@ sap.ui.require([
 		QUnit.test("$$groupId - sPath: " + sPath, function (assert) {
 			var oBinding,
 				oContext = this.oModel.createBindingContext("/absolute"),
-				oModelMock = this.mock(this.oModel),
-				mParameters = {};
+				oModelMock = this.mock(this.oModel);
 
 			oModelMock.expects("getGroupId").withExactArgs().returns("baz");
 			oModelMock.expects("getUpdateGroupId").twice().withExactArgs().returns("fromModel");
 
-			oModelMock.expects("buildBindingParameters")
-				.withExactArgs(sinon.match.same(mParameters), aAllowedBindingParameters)
-				.returns({$$groupId : "foo"});
 			// code under test
-			oBinding = this.oModel.bindProperty(sPath, oContext, mParameters);
+			oBinding = this.oModel.bindProperty(sPath, oContext, {$$groupId : "foo"});
 			assert.strictEqual(oBinding.getGroupId(), "foo");
 			assert.strictEqual(oBinding.getUpdateGroupId(), "fromModel");
 
-			oModelMock.expects("buildBindingParameters")
-				.withExactArgs(sinon.match.same(mParameters), aAllowedBindingParameters)
-				.returns({});
 			// code under test
-			oBinding = this.oModel.bindProperty(sPath, oContext, mParameters);
+			oBinding = this.oModel.bindProperty(sPath, oContext, {});
 			assert.strictEqual(oBinding.getGroupId(), "baz");
 			assert.strictEqual(oBinding.getUpdateGroupId(), "fromModel");
 		});

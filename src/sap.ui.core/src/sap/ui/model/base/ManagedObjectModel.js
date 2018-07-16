@@ -2,8 +2,26 @@
  * ! ${copyright}
  */
 sap.ui.define([
-	'jquery.sap.global', '../json/JSONModel', '../json/JSONPropertyBinding', '../json/JSONListBinding', 'sap/ui/base/ManagedObject', 'sap/ui/base/ManagedObjectObserver', '../Context', '../ChangeReason'
-], function(jQuery, JSONModel, JSONPropertyBinding, JSONListBinding, ManagedObject, ManagedObjectObserver, Context, ChangeReason) {
+	'../json/JSONModel',
+	'../json/JSONPropertyBinding',
+	'../json/JSONListBinding',
+	'sap/ui/base/ManagedObject',
+	'sap/ui/base/ManagedObjectObserver',
+	'../Context',
+	'../ChangeReason',
+	"sap/base/util/uid",
+	"sap/base/Log"
+], function(
+	JSONModel,
+	JSONPropertyBinding,
+	JSONListBinding,
+	ManagedObject,
+	ManagedObjectObserver,
+	Context,
+	ChangeReason,
+	uid,
+	Log
+) {
 	"use strict";
 
 	var ManagedObjectModelAggregationBinding = JSONListBinding.extend("sap.ui.model.base.ManagedObjectModelAggregationBinding"),
@@ -153,7 +171,7 @@ sap.ui.define([
 						return true;
 					}
 				} else {
-					jQuery.sap.log.warning("The setProperty method only supports properties, the path " + sResolvedPath + " does not point to a property", null, "sap.ui.model.base.ManagedObjectModel");
+					Log.warning("The setProperty method only supports properties, the path " + sResolvedPath + " does not point to a property", null, "sap.ui.model.base.ManagedObjectModel");
 				}
 			} else if (oObject[sProperty] !== oValue) {
 				// get get an update of a property that was bound on a target
@@ -395,7 +413,7 @@ sap.ui.define([
 		}
 
 		if (!sId) {
-			return oObject.getId() + ID_DELIMITER + jQuery.sap.uid();
+			return oObject.getId() + ID_DELIMITER + uid();
 		}
 
 		if (sId.indexOf(oObject.getId() + ID_DELIMITER) != 0) { // ID not already prefixed
@@ -498,6 +516,10 @@ sap.ui.define([
 			sPart;
 		while (oNode !== null && aParts[iIndex]) {
 			sPart = aParts[iIndex];
+			if (sPart == "id") {
+				//Managed Object Model should accept also /id as path to be used for templating
+				sPart = "@id";
+			}
 
 			if (sPart.indexOf("@") === 0) {
 				// special properties
@@ -589,6 +611,11 @@ sap.ui.define([
 
 		var sPart = aParts[0];
 
+		//handling of # for byId case of view
+		if (oNode.getMetadata().isInstanceOf("sap.ui.core.IDScope") && sPart.indexOf("#") === 0) {
+			oNode = oNode.byId(sPart.substring(1));
+			sPart = aParts[1];
+		}
 		if (oNode instanceof ManagedObject) {
 			var oNodeMetadata = oNode.getMetadata(), oProperty = oNodeMetadata.getProperty(sPart);
 			if (oProperty) {

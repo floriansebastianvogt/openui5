@@ -14,7 +14,7 @@ sap.ui.define([
 	'sap/ui/core/format/DateFormat',
 	'sap/ui/core/LocaleData',
 	'./DateTimePickerRenderer',
-	'jquery.sap.keycodes'
+	"sap/ui/events/KeyCodes"
 ], function(
 	jQuery,
 	DatePicker,
@@ -25,8 +25,9 @@ sap.ui.define([
 	Device,
 	DateFormat,
 	LocaleData,
-	DateTimePickerRenderer
-	) {
+	DateTimePickerRenderer,
+	KeyCodes
+) {
 	"use strict";
 
 	// shortcut for sap.m.PlacementType
@@ -238,22 +239,8 @@ sap.ui.define([
 				var oSwitcher = this.getAggregation("_switcher");
 				var sKey = oSwitcher.getSelectedKey();
 				this._switchVisibility(sKey);
-				if (Device.system.phone) {
-					this._adjustTimePickerHeightOnPhone();
-				}
 			}
 
-		},
-
-		_adjustTimePickerHeightOnPhone: function() {
-			var oSwitcher = this.getAggregation("_switcher"),
-				// height of the area containing the buttons that switch from date picker to time picker
-				sSwhitcherButtonsHeight = oSwitcher.$().children(0).css("height").replace('px','');
-
-			// we have to set the height of the DateTimePicker container ("sapMDateTimePopupCont")
-			// so the TimePicker can calculate correctly it's height depending on the container height minus height of the dialog footer height
-			// for doing this we get the document height and extract the switch buttons area height
-			this.$().css("height", (document.documentElement.clientHeight - parseInt(sSwhitcherButtonsHeight, 10)) + "px");
 		},
 
 		_handleSelect: function(oEvent) {
@@ -508,7 +495,7 @@ sap.ui.define([
 			if (Device.system.desktop) {
 				this._oPopoverKeydownEventDelegate = {
 						onkeydown: function(oEvent) {
-							var oKC = jQuery.sap.KeyCodes,
+							var oKC = KeyCodes,
 							iKC = oEvent.which || oEvent.keyCode,
 							bAlt = oEvent.altKey;
 
@@ -547,7 +534,7 @@ sap.ui.define([
 
 		var oSliders = this._oPopup.getContent()[0] && this._oPopup.getContent()[0].getTimeSliders();
 		if (oSliders) {//Sliders values need to be updated after a popup is (especially sliders) is really visible
-			jQuery.sap.delayedCall(0, oSliders, oSliders._updateSlidersValues);
+			setTimeout(oSliders._updateSlidersValues.bind(oSliders), 0);
 		}
 	};
 
@@ -585,6 +572,7 @@ sap.ui.define([
 		}
 
 		if (!this._oSliders) {
+			//TODO: global jquery call found
 			jQuery.sap.require("sap.m.TimePickerSliders");
 			this._oSliders = new sap.m.TimePickerSliders(this.getId() + "-Sliders", {
 				minutesStep: this.getMinutesStep(),

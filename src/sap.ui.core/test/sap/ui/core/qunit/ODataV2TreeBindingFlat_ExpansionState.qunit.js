@@ -310,7 +310,7 @@ QUnit.test("Restore tree state: Expand error handling, restore of deep nodes fai
 			that.fakeService.setServiceStatus({
 				url: {
 					500: [
-						/\$filter=\(GLAccount_ParentID%20eq%20%27FinancialStatementItem%3a99991%27\)/
+						/\$filter=GLAccount_ParentID%20eq%20%27FinancialStatementItem%3a99991%27/
 					]
 				}
 			});
@@ -375,7 +375,7 @@ QUnit.test("Restore tree state: Expand error handling, restore of server index n
 			that.fakeService.setServiceStatus({
 				url: {
 					500: [
-						/\$filter=\(GLAccount_Level%20le%200\)/
+						/\$filter=GLAccount_Level%20le%200/
 					]
 				}
 			});
@@ -438,8 +438,8 @@ QUnit.test("Restore tree state: Expand error handling, all sub requests fail", f
 			that.fakeService.setServiceStatus({
 				url: {
 					500: [
-						/\$filter=\(GLAccount_Level%20le%200\)/,
-						/\$filter=\(GLAccount_ParentID%20eq%20%27FinancialStatementItem%3a99991%27\)/
+						/\$filter=GLAccount_Level%20le%200/,
+						/\$filter=GLAccount_ParentID%20eq%20%27FinancialStatementItem%3a99991%27/
 					]
 				}
 			});
@@ -637,7 +637,7 @@ QUnit.test("Restore tree state: Collapse error handling, whole batch fails", fun
 			that.fakeService.setServiceStatus({
 				url: {
 					500: [
-						/\$filter=\(GLAccount_Level%20le%201\)/
+						/\$filter=GLAccount_Level%20le%201/
 					]
 				}
 			});
@@ -1108,15 +1108,11 @@ QUnit.test("Restore tree state: insert deep node (UC2)", function(assert) {
 		// update the length after expand which is used for comparing after the save
 		iOldLength = oBinding.getLength();
 
-		var oStubUid = sinon.stub(jQuery.sap, "uid", function() {
-			return "uc2-new-node-1";
-		});
 		var oContext = oBinding.createEntry({
 			urlParameters: {
 				"hierarchy_fake_node_id": "NODE113334"
 			}
 		});
-		oStubUid.restore();
 
 		oBinding.addContexts(oParent.context, [oContext]);
 
@@ -1229,15 +1225,11 @@ QUnit.test("Restore tree state: insert server index- and deep nodes (UC4)", func
 		sOldLastNodeKey = oBinding.findNode(iOldLength - 1).key;
 
 		oParent = oBinding.findNode(5);
-		var oStubUid = sinon.stub(jQuery.sap, "uid", function() {
-			return "uc4-new-node-1";
-		});
 		var oContext1 = oBinding.createEntry({
 			urlParameters: {
 				"hierarchy_fake_node_id": "NODE500000"
 			}
 		});
-		oStubUid.restore();
 		oBinding.addContexts(oParent.context, [oContext1]);
 
 		// oStubUid = sinon.stub(jQuery.sap, "uid", function() {

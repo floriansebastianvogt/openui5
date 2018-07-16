@@ -13,8 +13,14 @@
  */
 
 // Provides the resource bundle based model implementation
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Model', './ResourcePropertyBinding'],
-	function(jQuery, BindingMode, Model, ResourcePropertyBinding) {
+sap.ui.define([
+	'sap/ui/model/BindingMode',
+	'sap/ui/model/Model',
+	'./ResourcePropertyBinding',
+	"sap/base/i18n/ResourceBundle",
+	"sap/base/Log"
+],
+	function(BindingMode, Model, ResourcePropertyBinding, ResourceBundle, Log) {
 	"use strict";
 
 
@@ -59,7 +65,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Mo
 			};
 
 			if (this.bAsync && this.sDefaultBindingMode == BindingMode.OneTime) {
-				jQuery.sap.log.warning("Using binding mode OneTime for asynchronous ResourceModel is not supported!");
+				Log.warning("Using binding mode OneTime for asynchronous ResourceModel is not supported!");
 			}
 
 			this.oData = oData;
@@ -108,7 +114,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Mo
 		}
 		bIncludeInfo = oConfiguration.getOriginInfo();
 		sUrl = _getUrl(oData.bundleUrl, oData.bundleName);
-		oRb = jQuery.sap.resources({url: sUrl, locale: sLocale, includeInfo: bIncludeInfo, async: bAsync});
+		oRb = ResourceBundle.create({url: sUrl, locale: sLocale, includeInfo: bIncludeInfo, async: bAsync});
 		return oRb;
 	};
 
@@ -134,7 +140,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Mo
 			}) : null;
 
 		function doEnhance(){
-			if (jQuery.sap.resources.isBundle(oData)) {
+			if (oData instanceof ResourceBundle) {
 				that._oResourceBundle._enhance(oData);
 				that.checkUpdate(true);
 				if (oPromise) {
@@ -256,7 +262,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Mo
 	function _getUrl(bundleUrl, bundleName){
 		var sUrl = bundleUrl;
 		if (bundleName) {
-			sUrl = jQuery.sap.getModulePath(bundleName, '.properties');
+			sUrl = sap.ui.require.toUrl((bundleName).replace(/\./g, "/")) + ".properties";
 		}
 		return sUrl;
 	}

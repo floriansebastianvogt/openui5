@@ -13,9 +13,10 @@ sap.ui.require([
 	"sap/ui/model/json/JSONModel",
 	"sap/ui/model/type/Currency",
 	"sap/ui/model/type/Date",
-	"sap/ui/model/type/String"
+	"sap/ui/model/type/String",
+	"sap/base/Log"
 ], function (jQuery, jQuery0, BindingParser, ExpressionParser, ManagedObject, Icon, Filter, Sorter, JSONModel,
-	Currency, Date, String) {
+	Currency, Date, String, Log) {
 	/*global QUnit, sinon */
 	/*eslint no-warning-comments: 0 */
 	"use strict";
@@ -64,7 +65,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.base.BindingParser", {
 		beforeEach : function (assert) {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 
@@ -888,6 +889,31 @@ sap.ui.require([
 			/*bTolerateFunctionsNotFound*/false, /*bStaticContext*/true);
 
 		oBindingInfo.formatter();
+	});
+
+	QUnit.test("Scope access w/o dot", function (assert) {
+		var sBinding1 = "{path : '/', formatter : 'foo'}",
+			sBinding2 = "{path : '/', formatter : 'Global.formatter'}",
+			oBindingInfo,
+			oScope = {
+				foo : function () {}
+			};
+
+		oBindingInfo = parse(sBinding1, oScope, /*bUnescape*/false,
+			/*bTolerateFunctionsNotFound*/true, /*bStaticContext*/true);
+
+		assert.strictEqual(oBindingInfo.formatter, undefined);
+		assert.deepEqual(oBindingInfo.functionsNotFound, ["foo"]);
+
+		oBindingInfo = parse(sBinding1, oScope, /*bUnescape*/false,
+			/*bTolerateFunctionsNotFound*/false, /*bStaticContext*/false, /*bPreferContext*/true);
+
+		assert.strictEqual(oBindingInfo.formatter, oScope.foo);
+
+		oBindingInfo = parse(sBinding2, oScope, /*bUnescape*/false,
+			/*bTolerateFunctionsNotFound*/false, /*bStaticContext*/false, /*bPreferContext*/true);
+
+		assert.strictEqual(oBindingInfo.formatter, Global.formatter);
 	});
 
 	QUnit.test("Expression binding with embedded composite binding", function (assert) {

@@ -12,8 +12,28 @@
  * @public
  */
 
-sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 'sap/ui/base/DataType', 'jquery.sap.script', 'jquery.sap.keycodes'],
-	function(jQuery, Device, DataType /*, jQuerySap1 */) {
+sap.ui.define('sap/ui/qunit/QUnitUtils', [
+	'jquery.sap.global',
+	'sap/base/util/ObjectPath',
+	'sap/ui/Device',
+	'sap/ui/base/DataType',
+	'sap/ui/events/KeyCodes',
+	"sap/base/strings/camelize",
+	"sap/base/strings/capitalize",
+	"sap/base/util/UriParameters",
+	"sap/base/Log"
+],
+	function(
+		jQuery,
+		ObjectPath,
+		Device,
+		DataType,
+		KeyCodes,
+		camelize,
+		capitalize,
+		UriParameters,
+		Log
+	) {
 	"use strict";
 
 	if ( typeof QUnit !== 'undefined' ) {
@@ -23,7 +43,7 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 		var bLegacySupport = !(parseFloat(QUnit.version) >= 2.0);
 
 		// extract the URL parameters
-		var mParams = jQuery.sap.getUriParameters();
+		var mParams = new UriParameters(window.location.href);
 
 		if ( bLegacySupport ) {
 		// TODO: Remove deprecated code once all projects adapted
@@ -306,6 +326,94 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 
 	};
 
+	function mapKeyCodeToLocation(sKey) {
+		if (!sKey) {
+			return undefined;
+		}
+
+		if (!isNaN(sKey)) {
+			var aKeys = Object.keys(KeyCodes).filter(function (sKeyName) {
+				return KeyCodes[sKeyName] === sKey;
+			});
+			if (aKeys.length === 1) {
+				sKey = aKeys[0];
+			}
+		}
+		if (sKey.toLowerCase().startsWith("numpad_")) {
+			return "NUMPAD";
+		}
+	}
+
+	/**
+	 * Maps the input keyCode to key property
+	 * @param sKeyCode {string|Integer} keyCode number or string, e.g. 27 or ESCAPE
+	 * @returns {*} the key property of KeyBoardEvent, e.g. Escape
+	 */
+	function mapKeyCodeToKey(sKeyCode) {
+
+		// look up number in KeyCodes enum to get the string
+		if (!isNaN(sKeyCode)) {
+			sKeyCode = getKeyCodeStringFromNumber(sKeyCode);
+		}
+		if (!sKeyCode) {
+			return undefined;
+		}
+		sKeyCode = sKeyCode.toLowerCase();
+		// replace underscores with dash character such as 'ARROW_LEFT' --> 'ARROW-LEFT' and then camelize it --> 'ArrowLeft'
+		sKeyCode = camelize(sKeyCode.replace(/_/g, "-"));
+
+		// capitalize key
+		var sKey = capitalize(sKeyCode);
+
+		// remove "Digit" and "Numpad" from the resulting string as this info is present within the Location property and not the key property
+		// e.g. "Digit9" --> "9"
+		if (sKey.startsWith("Digit")) {
+			return sKey.substring("Digit".length);
+		} else if (sKey.startsWith("Numpad")) {
+			sKey = sKey.substring("Numpad".length);
+		}
+
+		// special handling where KeyCodes[sKeyCode] does not match
+		// e.g. KeyCodes.BREAK --> 'Pause' instead of 'Break'
+		switch (sKey) {
+			case "Break": return "Pause";
+			case "Space": return " ";
+			case "Print": return "PrintScreen";
+			case "Windows": return "Meta";
+			case "Sleep": return "Standby";
+			case "TurnOff": return "PowerOff";
+			case "Asterisk": return "*";
+			case "Plus": return "+";
+			case "Minus": return "-";
+			case "Comma": return ",";
+			case "Slash": return "/";
+			case "OpenBracket": return ";";
+			case "Dot": return ".";
+			case "Pipe": return "|";
+			case "Semicolon": return ";";
+			case "Equals": return "=";
+			case "SingleQUote": return "=";
+			case "Backslash": return "\\";
+			case "GreatAccent": return "`";
+			default: return sKey;
+		}
+	}
+
+	/**
+	 * Retrieves keycode string from number
+	 * @param iKeyCode
+	 * @returns {string}
+	 */
+	function getKeyCodeStringFromNumber(iKeyCode) {
+		for (var sKey in KeyCodes) {
+			if (KeyCodes.hasOwnProperty(sKey)) {
+				if (KeyCodes[sKey] === iKeyCode) {
+					return sKey;
+				}
+			}
+		}
+	}
+
 
 	/**
 	 * Programmatically triggers a keyboard event specified by its name on a specified target.
@@ -313,7 +421,7 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 	 *
 	 * @param {string} sEventType The name of the browser keyboard event (like "keydown")
 	 * @param {string | DOMElement} oTarget The ID of a DOM element or a DOM element which serves as target of the event
-	 * @param {string | int} sKey The keys name as defined in <code>jQuery.sap.KeyCodes</code> or its key code
+	 * @param {string | int} sKey The keys name as defined in {@link sap.ui.events.KeyCodes} or its key code
 	 * @param {boolean} bShiftKey Indicates whether the shift key is down in addition
 	 * @param {boolean} bAltKey Indicates whether the alt key is down in addition
 	 * @param {boolean} bCtrlKey Indicates whether the ctrl key is down in addition
@@ -321,7 +429,18 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 	 */
 	QUtils.triggerKeyEvent = function(sEventType, oTarget, sKey, bShiftKey, bAltKey, bCtrlKey) {
 		var oParams = {};
-		oParams.keyCode = isNaN(sKey) ? jQuery.sap.KeyCodes[sKey] : sKey;
+		var bKeyIsNumber = !isNaN(sKey);
+		oParams.keyCode = bKeyIsNumber ? sKey : KeyCodes[sKey];
+
+		// set the "key" property
+		if (bKeyIsNumber) {
+			// look up number in KeyCodes enum to get the string
+			sKey = getKeyCodeStringFromNumber(sKey);
+		}
+
+		oParams.key = mapKeyCodeToKey(sKey);
+		oParams.location = mapKeyCodeToLocation(sKey);
+
 		oParams.which = oParams.keyCode;
 		oParams.shiftKey = bShiftKey;
 		oParams.altKey = bAltKey;
@@ -336,7 +455,7 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 	 * @see sap.ui.test.qunit.triggerKeyEvent
 	 *
 	 * @param {string | DOMElement} oTarget The ID of a DOM element or a DOM element which serves as target of the event
-	 * @param {string | int} sKey The keys name as defined in <code>jQuery.sap.KeyCodes</code> or its key code
+	 * @param {string | int} sKey The keys name as defined in {@link sap.ui.events.KeyCodes} or its key code
 	 * @param {boolean} bShiftKey Indicates whether the shift key is down in addition
 	 * @param {boolean} bAltKey Indicates whether the alt key is down in addition
 	 * @param {boolean} bCtrlKey Indicates whether the ctrl key is down in addition
@@ -352,7 +471,7 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 	 * @see sap.ui.test.qunit.triggerKeyEvent
 	 *
 	 * @param {string | DOMElement} oTarget The ID of a DOM element or a DOM element which serves as target of the event
-	 * @param {string | int} sKey The keys name as defined in <code>jQuery.sap.KeyCodes</code> or its key code
+	 * @param {string | int} sKey The keys name as defined in {@link sap.ui.events.KeyCodes} or its key code
 	 * @param {boolean} bShiftKey Indicates whether the shift key is down in addition
 	 * @param {boolean} bAltKey Indicates whether the alt key is down in addition
 	 * @param {boolean} bCtrlKey Indicates whether the ctrl key is down in addition
@@ -391,7 +510,7 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 	 */
 	QUtils.triggerKeypress = function(oTarget, sChar, bShiftKey, bAltKey, bCtrlKey) {
 		var _sChar = sChar && sChar.toUpperCase();
-		if (jQuery.sap.KeyCodes[_sChar] === null) {
+		if (KeyCodes[_sChar] === null) {
 			QUnit.ok(false, "Invalid character for triggerKeypress: '" + sChar + "'");
 		}
 		var _iCharCode = sChar.charCodeAt(0);
@@ -399,6 +518,8 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 		var oParams = {};
 		oParams.charCode = _iCharCode;
 		oParams.which = _iCharCode;
+		oParams.key = mapKeyCodeToKey(_sChar);
+		oParams.location = mapKeyCodeToLocation(_sChar);
 		oParams.shiftKey = !!bShiftKey;
 		oParams.altKey = !!bAltKey;
 		oParams.metaKey = !!bCtrlKey;
@@ -414,16 +535,22 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 	 *
 	 * @param {string | DOMElement} oInput The ID of a DOM input field or a DOM input field which serves as target
 	 * @param {string} sChar Only the first char of the string will be passed via keypress event
+	 * @param {string} [sValue] If passed, this will be set as the new value of the input and the method will not rely on the old value of the input
 	 * @public
 	 */
-	QUtils.triggerCharacterInput = function(oInput, sChar) {
+	QUtils.triggerCharacterInput = function(oInput, sChar, sValue) {
 		QUtils.triggerKeypress(oInput, sChar);
 
 		if (typeof (oInput) == "string") {
 			oInput = oInput ? document.getElementById(oInput) : null;
 		}
 		var $Input = jQuery(oInput);
-		$Input.val($Input.val() + sChar);
+
+		if (typeof sValue !== "undefined") {
+			$Input.val(sValue);
+		} else {
+			$Input.val($Input.val() + sChar);
+		}
 	};
 
 
@@ -507,7 +634,7 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 		 * wrapper around window.console
 		 */
 		function info(msg) {
-			jQuery.sap.log.info(msg);
+			Log.info(msg);
 		}
 
 		var M_DEFAULT_TEST_VALUES = {
@@ -559,11 +686,12 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 				}
 
 				try {
+					//TODO: global jquery call found
 					jQuery.sap.require(sType);
 				} catch (e) {
 					//escape eslint check for empty block
 				}
-				var oType = jQuery.sap.getObject(sType);
+				var oType = ObjectPath.get(sType);
 				if ( !(oType instanceof DataType) ) {
 					var r = [];
 					for (var n in oType) {
@@ -956,7 +1084,7 @@ sap.ui.define('sap/ui/qunit/QUnitUtils', ['jquery.sap.global', 'sap/ui/Device', 
 
 	// export
 	// TODO: Get rid of the old namespace and adapt the existing tests accordingly
-	jQuery.sap.setObject("sap.ui.test.qunit", QUtils);
+	ObjectPath.set("sap.ui.test.qunit", QUtils);
 	window.qutils = QUtils;
 
 	return QUtils;

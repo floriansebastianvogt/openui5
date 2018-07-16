@@ -2,7 +2,6 @@
  * ${copyright}
  */
 sap.ui.define([
-	'jquery.sap.global',
 	'./library',
 	'sap/ui/core/Control',
 	'sap/ui/Device',
@@ -11,10 +10,14 @@ sap.ui.define([
 	'sap/ui/base/ManagedObject',
 	'sap/ui/core/Icon',
 	'./HeaderContainerRenderer',
-	'jquery.sap.events'
+	"sap/base/Log",
+	"sap/ui/events/PseudoEvents",
+	"sap/ui/dom/jquery/control", // jQuery Plugin "control"
+	"sap/ui/dom/jquery/scrollLeftRTL", // jQuery Plugin "scrollLeftRTL"
+	"sap/ui/dom/jquery/scrollRightRTL", // jQuery Plugin "scrollRightRTL"
+	"sap/ui/dom/jquery/Selectors" // jQuery custom selectors ":sapTabbable"
 ],
 function(
-	jQuery,
 	library,
 	Control,
 	Device,
@@ -22,8 +25,10 @@ function(
 	coreLibrary,
 	ManagedObject,
 	Icon,
-	HeaderContainerRenderer
-	) {
+	HeaderContainerRenderer,
+	Log,
+	PseudoEvents
+) {
 		"use strict";
 
 		// shortcut for sap.ui.core.Orientation
@@ -263,10 +268,10 @@ function(
 
 		HeaderContainer.prototype.onBeforeRendering = function () {
 			if (!this.getHeight()) {
-				jQuery.sap.log.warning("No height provided", this);
+				Log.warning("No height provided", this);
 			}
 			if (!this.getWidth()) {
-				jQuery.sap.log.warning("No width provided", this);
+				Log.warning("No width provided", this);
 			}
 			if (Device.system.desktop) {
 				this._oArrowPrev.setIcon(this.getOrientation() === Orientation.Horizontal ? "sap-icon://slim-arrow-left" : "sap-icon://slim-arrow-up");
@@ -395,7 +400,7 @@ function(
 
 		HeaderContainer.prototype._scroll = function (iDelta, iDuration) {
 			this._setScrollInProcess(true);
-			jQuery.sap.delayedCall(iDuration + 300, this, this._setScrollInProcess, [false]);
+			setTimeout(this._setScrollInProcess.bind(this, false), iDuration + 300);
 			if (this.getOrientation() === Orientation.Horizontal) {
 				this._hScroll(iDelta, iDuration);
 			} else {
@@ -792,8 +797,8 @@ function(
 			var oOriginalEvent = oEvt.getParameter("event");
 			if (jQuery(oOriginalEvent.target).hasClass("sapMHdrCntrItemCntr") ||
 				jQuery(oOriginalEvent.target).hasClass("sapMScrollContScroll") ||
-				jQuery.sap.PseudoEvents.sapprevious.fnCheck(oOriginalEvent) ||
-				jQuery.sap.PseudoEvents.sapnext.fnCheck(oOriginalEvent)) {
+				PseudoEvents.events.sapprevious.fnCheck(oOriginalEvent) ||
+				PseudoEvents.events.sapnext.fnCheck(oOriginalEvent)) {
 				this.$().find(".sapMHdrCntrItemCntr").css("border-color", "");
 			} else {
 				this.$().find(".sapMHdrCntrItemCntr").css("border-color", "transparent");

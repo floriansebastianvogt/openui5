@@ -112,7 +112,7 @@ sap.ui.define([
 	 * @returns {Object} the resource bundle object
 	 */
 	ObjectPageSection._getLibraryResourceBundle = function() {
-		return library.i18nModel.getResourceBundle();
+		return sap.ui.getCore().getLibraryResourceBundle("sap.uxap");
 	};
 
 	ObjectPageSection.prototype._expandSection = function () {
@@ -132,10 +132,11 @@ sap.ui.define([
 	ObjectPageSection.prototype.setTitle = function (sValue) {
 		ObjectPageSectionBase.prototype.setTitle.call(this, sValue);
 
-		var oAriaLabelledBy = this.getAggregation("ariaLabelledBy");
+		var oAriaLabelledBy = this.getAggregation("ariaLabelledBy"),
+			sSectionText = ObjectPageSection._getLibraryResourceBundle().getText("SECTION_CONTROL_NAME");
 
 		if (oAriaLabelledBy) {
-			sap.ui.getCore().byId(oAriaLabelledBy.getId()).setText(sValue);
+			sap.ui.getCore().byId(oAriaLabelledBy.getId()).setText(sValue + " " + sSectionText);
 		}
 	};
 
@@ -208,8 +209,21 @@ sap.ui.define([
 	 * @returns {*} sap.ui.core.InvisibleText
 	 */
 	ObjectPageSection.prototype._getAriaLabelledBy = function () {
+		// Each section should be labelled as:
+		// 'titleName Section' - if the section has a title
+		// 'Section' - if it does not have a title
+
+		var sLabel = "",
+			sTitle = this._getTitle();
+
+		if (sTitle) {
+			sLabel += sTitle + " ";
+		}
+
+		sLabel += ObjectPageSection._getLibraryResourceBundle().getText("SECTION_CONTROL_NAME");
+
 		return new InvisibleText({
-			text: this._getTitle()
+			text: sLabel
 		}).toStatic();
 	};
 

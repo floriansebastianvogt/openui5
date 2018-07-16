@@ -20,12 +20,11 @@ sap.ui.define([
 	"sap/ui/support/supportRules/report/DataCollector",
 	"sap/ui/support/supportRules/WCBChannels",
 	"sap/ui/support/supportRules/Constants",
-	"sap/ui/support/supportRules/RuleSetLoader",
-	"sap/ui/support/supportRules/report/AnalysisHistoryFormatter"
+	"sap/ui/support/supportRules/RuleSetLoader"
 ],
 function (jQuery, ManagedObject, JSONModel, Analyzer, CoreFacade,
 		  ExecutionScope, Highlighter, CommunicationBus, RuleSerializer,
-		  RuleSet, IssueManager, History, DataCollector, channelNames, constants, RuleSetLoader, AnalysisHistoryFormatter) {
+		  RuleSet, IssueManager, History, DataCollector, channelNames, constants, RuleSetLoader) {
 	"use strict";
 
 	var IFrameController = null;
@@ -50,8 +49,6 @@ function (jQuery, ManagedObject, JSONModel, Analyzer, CoreFacade,
 						currentProgress: iCurrentProgress
 					});
 				};
-
-				RuleSetLoader._initTempRulesLib();
 
 				ManagedObject.apply(this, arguments);
 
@@ -82,6 +79,7 @@ function (jQuery, ManagedObject, JSONModel, Analyzer, CoreFacade,
 							return oMain.analyze(oExecutionScope, aRuleDescriptors);
 						});
 					},
+
 					/**
 					 * Gets last analysis history.
 					 * @memberof jQuery.sap.support
@@ -97,6 +95,7 @@ function (jQuery, ManagedObject, JSONModel, Analyzer, CoreFacade,
 							return null;
 						}
 					},
+
 					/**
 					 * Gets history.
 					 *
@@ -111,22 +110,20 @@ function (jQuery, ManagedObject, JSONModel, Analyzer, CoreFacade,
 
 						return History.getHistory();
 					},
+
 					/**
-					 * Gets formatted history.
+					 * Returns the history into formatted output depending on the passed format.
 					 *
 					 * @memberof jQuery.sap.support
 					 * @public
-					 * @method
-					 * @name sap.ui.support.Main.getFormattedAnalysisHistory
-					 * @memberof sap.ui.support.Main
-					 * @returns {string} Analyzed and formatted history
+					 * @param {sap.ui.support.HistoryFormats} [sFormat=sap.ui.support.HistoryFormats.String] The format into which the history object will be converted. Possible values are listed in sap.ui.support.HistoryFormats.
+					 * @returns {*} All analysis history objects in the correct format.
 					 */
-					getFormattedAnalysisHistory: function () {
+					getFormattedAnalysisHistory: function (sFormat) {
 						if (that._oAnalyzer.running()) {
 							return "";
 						}
-
-						return AnalysisHistoryFormatter.format(History.getHistory());
+						return History.getFormattedHistory(sFormat);
 					}
 				};
 
@@ -276,31 +273,6 @@ function (jQuery, ManagedObject, JSONModel, Analyzer, CoreFacade,
 		// for temporary rules
 		if (this._supportModeConfig.indexOf("silent") < 0) {
 
-			CommunicationBus.subscribe(channelNames.VERIFY_CREATE_RULE, function (tempRuleSerialized) {
-				var tempRule = RuleSerializer.deserialize(tempRuleSerialized),
-					tempRuleSet = RuleSetLoader.getRuleSet(constants.TEMP_RULESETS_NAME).ruleset,
-					result = tempRuleSet.addRule(tempRule);
-
-				CommunicationBus.publish(channelNames.VERIFY_RULE_CREATE_RESULT, {
-					result: result,
-					newRule: RuleSerializer.serialize(tempRule)
-				});
-
-			}, this);
-
-			CommunicationBus.subscribe(channelNames.VERIFY_UPDATE_RULE, function (data) {
-
-				var tempRule = RuleSerializer.deserialize(data.updateObj),
-					tempRuleSet = RuleSetLoader.getRuleSet(constants.TEMP_RULESETS_NAME).ruleset,
-					result = tempRuleSet.updateRule(data.oldId, tempRule);
-
-				CommunicationBus.publish(channelNames.VERIFY_RULE_UPDATE_RESULT, {
-					result: result,
-					updateRule: RuleSerializer.serialize(tempRule)
-				});
-
-			}, this);
-
 			CommunicationBus.subscribe(channelNames.OPEN_URL, function (url) {
 				var win = window.open(url, "_blank");
 				win.focus();
@@ -378,8 +350,8 @@ function (jQuery, ManagedObject, JSONModel, Analyzer, CoreFacade,
 				});
 			}
 		}, this);
-		CommunicationBus.subscribe(channelNames.GET_NON_LOADED_RULE_SETS, function () {
-			RuleSetLoader.fetchNonLoadedRuleSets();
+		CommunicationBus.subscribe(channelNames.GET_NON_LOADED_RULE_SETS, function (data) {
+			RuleSetLoader.fetchNonLoadedRuleSets(data.loadedRulesets);
 		}, this);
 	};
 

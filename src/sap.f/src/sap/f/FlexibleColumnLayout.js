@@ -586,6 +586,8 @@ sap.ui.define([
 		}
 	});
 
+	FlexibleColumnLayout.COLUMN_RESIZING_ANIMATION_DURATION = 560; // ms
+
 	FlexibleColumnLayout.prototype.init = function () {
 
 		// Create the 3 nav containers
@@ -596,6 +598,23 @@ sap.ui.define([
 
 		// Holds an object, responsible for saving and searching the layout history
 		this._oLayoutHistory = new LayoutHistory();
+
+		// Indicates when there are rendered pages and we can show the arrows
+		this._bIsNavContainersContentRendered = false;
+	};
+
+	/**
+	 * Sets <code>_bIsNavContainersContentRendered</code> to <code>true</code> upon first page of <code>NavContainers</code> added.
+	 * Show all needed arrows.
+	 * @private
+	 */
+	FlexibleColumnLayout.prototype._onFirstPageRendered = function () {
+		if (this._bIsNavContainersContentRendered) {
+			return;
+		}
+
+		this._bIsNavContainersContentRendered = true;
+		this._hideShowArrows();
 	};
 
 	/**
@@ -606,8 +625,7 @@ sap.ui.define([
 	 */
 	FlexibleColumnLayout.prototype._createNavContainer = function (sColumn) {
 		var sColumnCap = sColumn.charAt(0).toUpperCase() + sColumn.slice(1);
-
-		return new NavContainer(this.getId() + "-" + sColumn + "ColumnNav", {
+		var oNavContainer = new NavContainer(this.getId() + "-" + sColumn + "ColumnNav", {
 			navigate: function(oEvent){
 				this._handleNavigationEvent(oEvent, false, sColumn);
 			}.bind(this),
@@ -616,6 +634,10 @@ sap.ui.define([
 			}.bind(this),
 			defaultTransitionName: this["getDefaultTransitionName" + sColumnCap + "Column"]()
 		});
+
+		sColumn === "begin" && oNavContainer.attachEvent("_onNavContainerRendered", this._onFirstPageRendered, this);
+
+		return oNavContainer;
 	};
 
 	/**
@@ -746,6 +768,7 @@ sap.ui.define([
 	};
 
 	FlexibleColumnLayout.prototype.exit = function () {
+		this._bIsNavContainersContentRendered = false;
 		this._deregisterResizeHandler();
 		this._handleEvent(jQuery.Event("Destroy"));
 	};
@@ -879,18 +902,20 @@ sap.ui.define([
 		iAvailableWidth = this._getControlWidth() - iTotalMargin;
 
 		aColumns.forEach(function (sColumn) {
+			var oColumn = this._$columns[sColumn];
+
 			iPercentWidth = this._getColumnSize(sColumn);
 
 			// Add the left margin if the column has width and there was already a non-zero width column before it (bNeedsMargin = true)
-			this._$columns[sColumn].toggleClass("sapFFCLColumnMargin", bNeedsMargin && iPercentWidth > 0);
+			oColumn.toggleClass("sapFFCLColumnMargin", bNeedsMargin && iPercentWidth > 0);
 
 			// Add the active class to the column if it shows something
-			this._$columns[sColumn].toggleClass("sapFFCLColumnActive", iPercentWidth > 0);
+			oColumn.toggleClass("sapFFCLColumnActive", iPercentWidth > 0);
 
 			// Remove all the classes that are used for HCB theme borders, they will be set again later
-			this._$columns[sColumn].removeClass("sapFFCLColumnOnlyActive");
-			this._$columns[sColumn].removeClass("sapFFCLColumnLastActive");
-			this._$columns[sColumn].removeClass("sapFFCLColumnFirstActive");
+			oColumn.removeClass("sapFFCLColumnOnlyActive");
+			oColumn.removeClass("sapFFCLColumnLastActive");
+			oColumn.removeClass("sapFFCLColumnFirstActive");
 
 			// Change the width of the column
 			iNewWidth = Math.round(iAvailableWidth * (iPercentWidth / 100));
@@ -902,14 +927,25 @@ sap.ui.define([
 
 			// Animations on - suspend ResizeHandler while animation is running
 			if (sap.ui.getCore().getConfiguration().getAnimationMode() !== Configuration.AnimationMode.none) {
-				var oColumnDomRef = this._$columns[sColumn].get(0);
+
+				var oColumnDomRef = oColumn.get(0);
+
+				// Suspending ResizeHandler temporarily
 				ResizeHandler.suspend(oColumnDomRef);
-				this._$columns[sColumn].one("webkitTransitionEnd msTransitionEnd transitionend", function () {
+
+				// Clear previous timeouts if present
+				if (oColumn._iResumeResizeHandlerTimeout) {
+					clearTimeout(oColumn._iResumeResizeHandlerTimeout);
+				}
+
+				// Schedule resume of ResizeHandler
+				oColumn._iResumeResizeHandlerTimeout = setTimeout(function() {
 					ResizeHandler.resume(oColumnDomRef);
-				});
+					oColumn._iResumeResizeHandlerTimeout = null;
+				}, FlexibleColumnLayout.COLUMN_RESIZING_ANIMATION_DURATION);
 			}
 
-			this._$columns[sColumn].width(sNewWidth);
+			oColumn.width(sNewWidth);
 
 			// For tablet and desktop - notify child controls to render with reduced container size, if they need to
 			if (!Device.system.phone) {
@@ -1116,10 +1152,9 @@ sap.ui.define([
 			}
 		}
 
-		this._toggleButton("beginBack", aNeededArrows.indexOf("beginBack") !== -1);
-		this._toggleButton("midForward", aNeededArrows.indexOf("midForward") !== -1);
-		this._toggleButton("midBack", aNeededArrows.indexOf("midBack") !== -1);
-		this._toggleButton("endForward", aNeededArrows.indexOf("endForward") !== -1);
+		Object.keys(this._$columnButtons).forEach(function (key) {
+			this._toggleButton(key, this._bIsNavContainersContentRendered && aNeededArrows.indexOf(key) !== -1);
+		}, this);
 	};
 
 	/**

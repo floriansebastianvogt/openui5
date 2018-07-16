@@ -2,8 +2,9 @@
  * ${copyright}
  */
 
+// package documentation
 /**
- * Calendar Utility Class
+ * Controls and helper classes around the calendar control.
  *
  * @namespace
  * @name sap.ui.unified.calendar
@@ -11,8 +12,13 @@
  */
 
 // Provides class sap.ui.unified.calendar.CalendarUtils
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/date/UniversalDate', './CalendarDate', 'sap/ui/core/Locale', 'sap/ui/core/LocaleData'],
-	function (jQuery, UniversalDate, CalendarDate, Locale, LocaleData) {
+sap.ui.define([
+	'sap/ui/core/date/UniversalDate',
+	'./CalendarDate',
+	'sap/ui/core/Locale',
+	'sap/ui/core/LocaleData'
+],
+	function(UniversalDate, CalendarDate, Locale, LocaleData) {
 		"use strict";
 
 		// Static class

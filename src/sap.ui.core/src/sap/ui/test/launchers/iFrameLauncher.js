@@ -2,11 +2,13 @@
  * ${copyright}
  */
 sap.ui.define([
-		'jquery.sap.global',
 		'sap/ui/thirdparty/URI',
 		'sap/ui/Device',
-		'sap/ui/test/_LogCollector'
-	], function ($, URI, Device, _LogCollector) {
+		'sap/ui/test/_LogCollector',
+		"sap/base/Log",
+		"sap/ui/thirdparty/jquery",
+		'sap/base/util/ObjectPath'
+	], function (URI, Device, _LogCollector, Log, jQueryDOM, ObjectPath) {
 	"use strict";
 
 	/*global CollectGarbage */
@@ -224,7 +226,7 @@ sap.ui.define([
 				sNewPreviousHash = oHistory.aHistory[oHistory.iHistoryPosition];
 
 			if (sNewCurrentHash === undefined) {
-				$.sap.log.error("Could not navigate forwards, there is no history entry in the forwards direction", this);
+				Log.error("Could not navigate forwards, there is no history entry in the forwards direction", this);
 				return;
 			}
 
@@ -244,7 +246,7 @@ sap.ui.define([
 				return;
 			}
 
-			$.sap.log.error("Using history.go with a number greater than 1 is not supported by OPA5", this);
+			Log.error("Using history.go with a number greater than 1 is not supported by OPA5", this);
 			return fnOriginalGo.apply(oFrameWindow.history, arguments);
 		};
 	}
@@ -280,7 +282,7 @@ sap.ui.define([
 	function registerAbsoluteResourcePathInIframe(sResource) {
 		var sOpaLocation = sap.ui.require.toUrl(sResource);
 		var sAbsoluteOpaPath = new URI(sOpaLocation).absoluteTo(document.baseURI).search("").toString();
-		var fnConfig = oFrameWindow.sap.ui._ui5loader || oFrameWindow.sap.ui.loader.config;
+		var fnConfig = ObjectPath.get("sap.ui._ui5loader.config", oFrameWindow) || ObjectPath.get("sap.ui.loader.config", oFrameWindow);
 		if (fnConfig) {
 			var paths = {};
 			paths[sResource] = sAbsoluteOpaPath;
@@ -299,7 +301,7 @@ sap.ui.define([
 			throw new Error("sap.ui.test.launchers.iFrameLauncher: Teardown was called before launch. No iFrame was loaded.");
 		}
 		// Workaround for IE - there are errors even after removing the frame so setting the onerror to noop again seems to be fine
-		oFrameWindow.onerror = $.noop;
+		oFrameWindow.onerror = jQueryDOM.noop;
 		for (var i = 0; i < $Frame.length; i++) {
 			$Frame[0].src = "about:blank";
 			$Frame[0].contentWindow.document.write('');
@@ -332,15 +334,15 @@ sap.ui.define([
 			}
 
 			//invalidate the cache
-			$Frame = $("#" + options.frameId);
+			$Frame = jQueryDOM("#" + options.frameId);
 
 			if (!$Frame.length) {
 				if (!options.source) {
-					$.sap.log.error("No source was given to launch the IFrame", this);
+					Log.error("No source was given to launch the IFrame", this);
 				}
 				//invalidate other caches
-				$Frame = $('<IFrame id="' + options.frameId + '" class="opaFrame" src="' + options.source + '"></IFrame>');
-				$("body").append($Frame);
+				$Frame = jQueryDOM('<IFrame id="' + options.frameId + '" class="opaFrame" src="' + options.source + '"></IFrame>');
+				jQueryDOM("body").append($Frame);
 				setFrameSize(options.width, options.height);
 			}
 

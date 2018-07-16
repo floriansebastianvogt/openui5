@@ -6,15 +6,34 @@
  * Initialization Code and shared classes of library sap.m.
  */
 sap.ui.define([
-	'jquery.sap.global',
 	'sap/ui/Device',
 	'sap/ui/base/DataType',
 	'sap/ui/base/EventProvider',
 	'sap/ui/core/Control',
-	'sap/ui/core/library', // library dependency
-	'jquery.sap.mobile', // referenced here in case the Core decides to throw it out - shall always be available when using the mobile lib.
-	'./Support'], // referenced here to enable the Support feature
-	function(jQuery, Device, DataType, EventProvider, Control, CoreLibrary) {
+	'sap/base/util/ObjectPath',
+	// library dependency
+	'sap/ui/core/library',
+	"sap/base/strings/capitalize",
+	"sap/ui/thirdparty/jquery",
+	"sap/base/assert",
+	"sap/base/Log",
+	"sap/base/util/defineLazyProperty",
+	// referenced here to enable the Support feature
+	'./Support'
+],
+	function(
+	Device,
+	DataType,
+	EventProvider,
+	Control,
+	ObjectPath,
+	CoreLibrary,
+	capitalize,
+	jQueryDOM,
+	assert,
+	Log,
+	defineLazyProperty
+) {
 
 	"use strict";
 
@@ -180,6 +199,9 @@ sap.ui.define([
 			"sap.m.ObjectMarker",
 			"sap.m.ObjectNumber",
 			"sap.m.ObjectStatus",
+			"sap.m.OnePersonCalendar",
+			"sap.m.OnePersonGrid",
+			"sap.m.OnePersonHeader",
 			"sap.m.OverflowToolbar",
 			"sap.m.OverflowToolbarButton",
 			"sap.m.OverflowToolbarToggleButton",
@@ -700,15 +722,15 @@ sap.ui.define([
 		/**
 		 * This is the default value for Dialog type.
 		 *
-		 * Standard dialog in iOS has a header on the top and the left, right buttons are put inside the header.
-		 * In android, the left, right buttons are put to the bottom of the Dialog.
+		 * The Standard Dialog in iOS has a header on the top. The Left and the Right buttons are put inside the header.
+		 * In Android, the Left and the Right buttons are put at the bottom of the Dialog.
 		 * @public
 		 */
 		Standard : "Standard",
 
 		/**
 		 * Dialog with type Message looks the same as the Standard Dialog in Android.
-		 * And it puts the left, right buttons to the bottom of the Dialog in iOS.
+		 * It puts the Left and the Right buttons at the bottom of the Dialog in iOS.
 		 * @public
 		 */
 		Message : "Message"
@@ -1577,6 +1599,8 @@ sap.ui.define([
 	 *       allowing to optimize the behavior of controls that do not need to overflow, but are used in an <code>sap.m.OverflowToolbar</code> regardless.</li>
 	 *
 	 *       <li><code>autoCloseEvents</code> - An array of strings, listing all of the control's events that should trigger the closing of the overflow menu, when fired.</li>
+	 *
+	 *       <li><code>invalidationEvents</code> - An array of strings, listing all of the control's events that should trigger the invalidation of the <code>sap.m.OverflowToolbar</code>, when fired.</li>
 	 *
 	 *       <li><code>propsUnrelatedToSize</code> - An array of strings, listing all of the control's properties that, when changed, should not cause the overflow toolbar to invalidate.
 	 *
@@ -3543,7 +3567,13 @@ sap.ui.define([
 	 * @private
 	 * @since 1.12
 	 */
-	thisLib.BaseFontSize = jQuery(document.documentElement).css("font-size") || "16px";
+	defineLazyProperty(thisLib, "BaseFontSize", function () {
+		// jQuery(...).css() is executed only on "BaseFontSize" property access.
+		// This avoids accessing the DOM during library evaluation
+		// which might be too early, e.g. when the library is loaded within the head element.
+		thisLib.BaseFontSize = jQuery(document.documentElement).css("font-size") || "16px";
+		return thisLib.BaseFontSize;
+	});
 
 	/**
 	 * Hide the soft keyboard.
@@ -3586,7 +3616,7 @@ sap.ui.define([
 		if (oTouch && typeof oTouch.identifier !== "undefined") {
 			oTouch = oTouch.identifier;
 		} else if (typeof oTouch !== "number") {
-			jQuery.sap.assert(false, 'sap.m.touch.find(): oTouch must be a touch object or a number');
+			assert(false, 'sap.m.touch.find(): oTouch must be a touch object or a number');
 			return;
 		}
 
@@ -3625,9 +3655,9 @@ sap.ui.define([
 		if (vElement instanceof Element) {
 			vElement = jQuery(vElement);
 		} else if (typeof vElement === "string") {
-			vElement = jQuery.sap.byId(vElement);
+			vElement = jQueryDOM(document.getElementById(vElement));
 		} else if (!(vElement instanceof jQuery)) {
-			jQuery.sap.assert(false, 'sap.m.touch.countContained(): vElement must be a jQuery object or Element reference or a string');
+			assert(false, 'sap.m.touch.countContained(): vElement must be a jQuery object or Element reference or a string');
 			return 0;
 		}
 
@@ -3762,16 +3792,16 @@ sap.ui.define([
 			 * @public
 			 */
 			redirect: function (sURL, bNewWindow) {
-				jQuery.sap.assert(isValidString(sURL), this + "#redirect: URL must be a string" );
+				assert(isValidString(sURL), this + "#redirect: URL must be a string" );
 				this.fireEvent("redirect", sURL);
 				if (!bNewWindow) {
 					window.location.href = sURL;
 				} else {
 					var oWindow = window.open(sURL, "_blank");
 					if (!oWindow) {
-						jQuery.sap.log.error(this + "#redirect: Could not open " + sURL);
+						Log.error(this + "#redirect: Could not open " + sURL);
 						if (Device.os.windows_phone || (Device.browser.edge && Device.browser.mobile)) {
-							jQuery.sap.log.warning("URL will be enforced to open in the same window as a fallback from a known Windows Phone system restriction. Check the documentation for more information.");
+							Log.warning("URL will be enforced to open in the same window as a fallback from a known Windows Phone system restriction. Check the documentation for more information.");
 							window.location.href = sURL;
 						}
 					}
@@ -3969,7 +3999,7 @@ sap.ui.define([
 		 */
 		function checkAndSetProperty(oControl, property, value) {
 			if (value !== undefined) {
-				var fSetter = oControl['set' + jQuery.sap.charToUpperCase(property)];
+				var fSetter = oControl['set' + capitalize(property)];
 				if (typeof (fSetter) === "function") {
 					fSetter.call(oControl, value);
 					return true;
@@ -3977,8 +4007,8 @@ sap.ui.define([
 			}
 			return false;
 		}
-
-		return /** @lends sap.m.ImageHelper */ {
+		/** @lends sap.m.ImageHelper */
+		var oImageHelper = {
 			/**
 			 * Creates or updates an image control.
 			 *
@@ -3995,7 +4025,7 @@ sap.ui.define([
 			 * @protected
 			 */
 			getImageControl: function(sImgId, oImage, oParent, mProperties, aCssClassesToAdd, aCssClassesToRemove) {
-				jQuery.sap.assert( mProperties.src , "sap.m.ImageHelper.getImageControl: mProperties do not contain 'src'");
+				assert( mProperties.src , "sap.m.ImageHelper.getImageControl: mProperties do not contain 'src'");
 
 				// make sure, image is rerendered if icon source has changed
 				if (oImage && (oImage.getSrc() != mProperties.src)) {
@@ -4035,6 +4065,7 @@ sap.ui.define([
 				return oImage;
 			}
 		};
+		return oImageHelper;
 	}());
 
 	/**
@@ -4056,12 +4087,12 @@ sap.ui.define([
 		 */
 		calcPercentageSize: function(sPercentage, fBaseSize){
 			if (typeof sPercentage !== "string") {
-				jQuery.sap.log.warning("sap.m.PopupHelper: calcPercentageSize, the first parameter" + sPercentage + "isn't with type string");
+				Log.warning("sap.m.PopupHelper: calcPercentageSize, the first parameter" + sPercentage + "isn't with type string");
 				return null;
 			}
 
 			if (sPercentage.indexOf("%") <= 0) {
-				jQuery.sap.log.warning("sap.m.PopupHelper: calcPercentageSize, the first parameter" + sPercentage + "is not a percentage string (for example '25%')");
+				Log.warning("sap.m.PopupHelper: calcPercentageSize, the first parameter" + sPercentage + "is not a percentage string (for example '25%')");
 				return null;
 			}
 
@@ -4203,7 +4234,8 @@ sap.ui.define([
 				oCtrl.attachSuggestionItemSelected(_fnSuggestionItemSelected);
 			}
 		};
-		return /** @lends sap.m.InputODataSuggestProvider */ {
+		/** @lends sap.m.InputODataSuggestProvider */
+		var oInputODataSuggestProvider = {
 
 			/**
 			 * @param {sap.ui.base.Event} oEvent
@@ -4256,7 +4288,7 @@ sap.ui.define([
 						if (sSearchFocus) {
 							oCustomParams["search-focus"] = sSearchFocus;
 						} else {
-							jQuery.sap.assert(false, 'no search-focus defined');
+							assert(false, 'no search-focus defined');
 						}
 					}
 
@@ -4301,11 +4333,12 @@ sap.ui.define([
 				}
 			}
 		};
+		return oInputODataSuggestProvider;
 	}());
 
 	// implement Form helper factory with m controls
 	// possible is set before layout lib is loaded.
-	jQuery.sap.setObject("sap.ui.layout.form.FormHelper", {
+	ObjectPath.set("sap.ui.layout.form.FormHelper", {
 		createLabel: function(sText){
 			return new sap.m.Label({text: sText});
 		},
@@ -4347,7 +4380,7 @@ sap.ui.define([
 	});
 
 	//implement FileUploader helper factory with m controls
-	jQuery.sap.setObject("sap.ui.unified.FileUploaderHelper", {
+	ObjectPath.set("sap.ui.unified.FileUploaderHelper", {
 		createTextField: function(sId){
 			var oTextField = new sap.m.Input(sId);
 			return oTextField;
@@ -4364,7 +4397,7 @@ sap.ui.define([
 	});
 
 	// implements ColorPicker helper factory with common controls
-	jQuery.sap.setObject("sap.ui.unified.ColorPickerHelper", {
+	ObjectPath.set("sap.ui.unified.ColorPickerHelper", {
 		isResponsive: function () {
 			return true;
 		},
@@ -4390,7 +4423,7 @@ sap.ui.define([
 
 	//implement table helper factory with m controls
 	//possible is set before layout lib is loaded.
-	jQuery.sap.setObject("sap.ui.table.TableHelper", {
+	ObjectPath.set("sap.ui.table.TableHelper", {
 		createLabel: function(mConfig){
 			return new sap.m.Label(mConfig);
 		},

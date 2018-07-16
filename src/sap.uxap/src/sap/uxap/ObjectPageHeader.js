@@ -342,7 +342,7 @@ sap.ui.define([
 			this.oLibraryResourceBundle = sap.ui.getCore().getLibraryResourceBundle("sap.m"); // get resource translation bundle
 		}
 		if (!this.oLibraryResourceBundleOP) {
-			this.oLibraryResourceBundleOP = library.i18nModel.getResourceBundle(); // get resource translation bundle
+			this.oLibraryResourceBundleOP = sap.ui.getCore().getLibraryResourceBundle("sap.uxap"); // get resource translation bundle
 		}
 
 		// Overflow button
@@ -728,10 +728,10 @@ sap.ui.define([
 		this._attachDetachActionButtonsHandler(true);
 	};
 
-	ObjectPageHeader.prototype._onHeaderResize = function () {
+	ObjectPageHeader.prototype._onHeaderResize = function (oEvent) {
 		this._adaptLayout();
-		if (this.getParent() && typeof this.getParent()._adjustHeaderHeights === "function") {
-			this.getParent()._adjustHeaderHeights();
+		if (this.getParent() && typeof this.getParent()._onUpdateHeaderTitleSize === "function") {
+			this.getParent()._onUpdateHeaderTitleSize(oEvent);
 		}
 	};
 
@@ -1140,6 +1140,15 @@ sap.ui.define([
 	ObjectPageHeader.prototype.supportsAdaptLayoutForDomElement = function () {
 		return true;
 	};
+
+	/**
+	 * Required by the {@link sap.uxap.IHeaderTitle} interface
+	 * @returns {boolean}
+	 */
+	ObjectPageHeader.prototype.supportsBackgroundDesign = function () {
+		return false;
+	};
+
 
 	/**
 	 * Returns the text that represents the title of the page.

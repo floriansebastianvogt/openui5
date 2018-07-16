@@ -3,8 +3,26 @@
  */
 
 // Provides class sap.ui.model.odata.ODataTreeBindingFlat
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBinding', 'sap/ui/model/odata/v2/ODataTreeBinding', 'sap/ui/model/ChangeReason', 'sap/ui/model/TreeBindingUtils'],
-	function(jQuery, Filter, TreeBinding, ODataTreeBinding, ChangeReason, TreeBindingUtils) {
+sap.ui.define([
+	'sap/ui/model/Filter',
+	'sap/ui/model/TreeBinding',
+	'sap/ui/model/odata/v2/ODataTreeBinding',
+	'sap/ui/model/ChangeReason',
+	'sap/ui/model/TreeBindingUtils',
+	"sap/base/util/uid",
+	"sap/base/Log",
+	"sap/base/assert"
+],
+	function(
+		Filter,
+		TreeBinding,
+		ODataTreeBinding,
+		ChangeReason,
+		TreeBindingUtils,
+		uid,
+		Log,
+		assert
+	) {
 	"use strict";
 
 	/**
@@ -523,7 +541,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				// check the magnitude attribute whether it's greater or equal than 0
 				if (iMagnitude < 0) {
 					iMagnitude = 0;
-					jQuery.sap.log.error("The entry data with key '" + sKey + "' under binding path '" + this.getPath() + "' has a negative 'hierarchy-node-descendant-count-for' which isn't allowed.");
+					Log.error("The entry data with key '" + sKey + "' under binding path '" + this.getPath() + "' has a negative 'hierarchy-node-descendant-count-for' which isn't allowed.");
 				}
 
 				var oNode = this._aNodes[iIndex] = this._aNodes[iIndex] || {
@@ -1008,7 +1026,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 	ODataTreeBindingFlat.prototype.toggleIndex = function(iRowIndex) {
 
 		var oToggledNode = this.findNode(iRowIndex);
-		jQuery.sap.assert(oToggledNode != undefined, "toggleIndex(" + iRowIndex + "): Node not found!");
+		assert(oToggledNode != undefined, "toggleIndex(" + iRowIndex + "): Node not found!");
 
 		if (oToggledNode) {
 			if (oToggledNode.nodeState.expanded) {
@@ -1028,7 +1046,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 		var oToggledNode = vRowIndex;
 		if (typeof vRowIndex !== "object") {
 			oToggledNode = this.findNode(vRowIndex);
-			jQuery.sap.assert(oToggledNode != undefined, "expand(" + vRowIndex + "): Node not found!");
+			assert(oToggledNode != undefined, "expand(" + vRowIndex + "): Node not found!");
 		}
 
 		if (oToggledNode.nodeState.expanded) {
@@ -1097,7 +1115,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 		var oToggledNode = vRowIndex;
 		if (typeof vRowIndex !== "object") {
 			oToggledNode = this.findNode(vRowIndex);
-			jQuery.sap.assert(oToggledNode != undefined, "expand(" + vRowIndex + "): Node not found!");
+			assert(oToggledNode != undefined, "expand(" + vRowIndex + "): Node not found!");
 		}
 
 		if (oToggledNode.nodeState.collapsed) {
@@ -1546,7 +1564,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 	 */
 	ODataTreeBindingFlat.prototype.setNodeSelection = function (oNode, bIsSelected) {
 
-		jQuery.sap.assert(oNode, "Node must be defined!");
+		assert(oNode, "Node must be defined!");
 
 		oNode.nodeState.selected = bIsSelected;
 
@@ -1689,7 +1707,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 
 			this._publishSelectionChanges(oChanges);
 		} else {
-			jQuery.sap.log.warning("ODataTreeBindingFlat: The selection of index '" + iRowIndex + "' was ignored. Please make sure to only select rows, for which data has been fetched to the client.");
+			Log.warning("ODataTreeBindingFlat: The selection of index '" + iRowIndex + "' was ignored. Please make sure to only select rows, for which data has been fetched to the client.");
 		}
 	};
 
@@ -1794,8 +1812,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				this._aExpandedAfterSelectAll.sort(function (a, b) {
 					var iA = this._getRelatedServerIndex(a);
 					var iB = this._getRelatedServerIndex(b);
-					jQuery.sap.assert(iA != undefined, "getSelectedNodesCount: (containing) Server-Index not found for node 'a'");
-					jQuery.sap.assert(iB != undefined, "getSelectedNodesCount: (containing) Server-Index not found node 'b'");
+					assert(iA != undefined, "getSelectedNodesCount: (containing) Server-Index not found for node 'a'");
+					assert(iB != undefined, "getSelectedNodesCount: (containing) Server-Index not found node 'b'");
 
 					// deep nodes are inside the same containing server-index --> sort them by their level
 					// this way we can make sure, that deeper nodes are sorted after higher-leveled ones
@@ -2361,7 +2379,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 
 			oNewEntry = this.oModel.createEntry(sAbsolutePath, mParameters);
 		} else {
-			jQuery.sap.log.warning("ODataTreeBindingFlat: createEntry failed, as the binding path could not be resolved.");
+			Log.warning("ODataTreeBindingFlat: createEntry failed, as the binding path could not be resolved.");
 		}
 
 		return oNewEntry;
@@ -2378,7 +2396,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 			oOptimizedChanges = this._optimizeChanges();
 
 		if (!sAbsolutePath) {
-			jQuery.sap.log.warning("ODataTreeBindingFlat: submitChanges failed, because the binding-path could not be resolved.");
+			Log.warning("ODataTreeBindingFlat: submitChanges failed, because the binding-path could not be resolved.");
 			return;
 		}
 		mParameters.groupId = this._getCorrectChangeGroup(sAbsolutePath);
@@ -2423,7 +2441,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 					// Application filters are currently not supported for tree state restoration
 					//	this is due to the SiblingsPosition being requested via GET Entity (not filterable) instead of GET Entity Set (filterable)
 					this._restoreTreeState(oOptimizedChanges).catch(function (err) {
-						jQuery.sap.log.error("ODataTreeBindingFlat - " + err.message, err.stack);
+						Log.error("ODataTreeBindingFlat - " + err.message, err.stack);
 						this._refresh(true);
 					}.bind(this));
 				} else {
@@ -2433,7 +2451,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				}
 			} else {
 				// batch response does not contain change responses: error case
-				jQuery.sap.log.warning("ODataTreeBindingFlat.submitChanges - success: Batch-request response does not contain change response.");
+				Log.warning("ODataTreeBindingFlat.submitChanges - success: Batch-request response does not contain change response.");
 			}
 
 		}.bind(this);
@@ -2448,7 +2466,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 
 		// built the actual requests for the change-set
 		this._generateSubmitData(oOptimizedChanges, function(err) {
-			jQuery.sap.log.error("ODataTreeBindingFlat - Tree state restoration request failed. " + err.message, err.stack);
+			Log.error("ODataTreeBindingFlat - Tree state restoration request failed. " + err.message, err.stack);
 			bRestoreRequestFailed = true;
 		});
 
@@ -2468,7 +2486,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 			that = this;
 
 		function setParent(oNode) {
-			jQuery.sap.assert(oNode.context, "Node does not have a context.");
+			assert(oNode.context, "Node does not have a context.");
 			var sParentNodeID = oNode.parent.context.getProperty(that.oTreeProperties["hierarchy-node-for"]);
 			that.oModel.setProperty(that.oTreeProperties["hierarchy-parent-node-for"], sParentNodeID, oNode.context);
 
@@ -2492,7 +2510,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 
 		aRemoved.forEach(function(oNode) {
 			this._generateDeleteRequest(oNode);
-			jQuery.sap.log.debug("ODataTreeBindingFlat: DELETE " + oNode.key);
+			Log.debug("ODataTreeBindingFlat: DELETE " + oNode.key);
 		}.bind(this));
 
 		aCreationCancelled.forEach(function(oNode) {
@@ -2606,7 +2624,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				}
 			}
 		} else {
-			jQuery.sap.log.warning("ODataTreeBindingFlat.nodeIsOnTopLevel: Node is not defined or not a server-indexed node.");
+			Log.warning("ODataTreeBindingFlat.nodeIsOnTopLevel: Node is not defined or not a server-indexed node.");
 		}
 	};
 
@@ -3049,7 +3067,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 			iPosition = oNode.context.getProperty(sPositionAnnot);
 			if (iPosition === undefined) {
 				// TODO: Throw error or compensate?
-				jQuery.sap.log.warning("ODataTreeBindingFlat", "Missing " + sPositionAnnot + " value for node " + oNode.key);
+				Log.warning("ODataTreeBindingFlat", "Missing " + sPositionAnnot + " value for node " + oNode.key);
 				break;
 			}
 
@@ -3241,8 +3259,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 		aPotentiallyRemovedNodes.sort(function (a, b) {
 			var iA = this._getRelatedServerIndex(a);
 			var iB = this._getRelatedServerIndex(b);
-			jQuery.sap.assert(iA != undefined, "_generateSubmitData: (containing) Server-Index not found for node 'a'");
-			jQuery.sap.assert(iB != undefined, "_generateSubmitData: (containing) Server-Index not found node 'b'");
+			assert(iA != undefined, "_generateSubmitData: (containing) Server-Index not found for node 'a'");
+			assert(iB != undefined, "_generateSubmitData: (containing) Server-Index not found node 'b'");
 
 			// deep nodes are inside the same containing server-index --> sort them first by their level. If they are under
 			// the same parent, sort them using their position in the parent
@@ -3311,8 +3329,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 		var aDeepNodes = [], that = this;
 		this._map(function(oNode) {
 			if (oNode && oNode.nodeState.expanded && (
-					oNode.initiallyCollapsed || // server index nodes on the initial expansion level
-					oNode.isDeepOne // deep nodes
+					(// server index nodes on the initial expansion level
+					oNode.initiallyCollapsed || oNode.isDeepOne) // deep nodes
 			)) {
 				aDeepNodes.push({
 					oParentNode: oNode,
@@ -3342,7 +3360,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 			oNewHandle,
 			oContext;
 
-		jQuery.sap.assert(oParentContext && vContextHandles, "ODataTreeBinding.addContexts() was called with incomplete arguments!");
+		assert(oParentContext && vContextHandles, "ODataTreeBinding.addContexts() was called with incomplete arguments!");
 
 		// we can only add nodes if we have a valid parent node
 		if (oNewParentNode) {
@@ -3359,7 +3377,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				if (vContextHandles instanceof sap.ui.model.Context) {
 					vContextHandles = [vContextHandles];
 				} else {
-					jQuery.sap.log.warning("ODataTreeBinding.addContexts(): The child node argument is not of type sap.ui.model.Context.");
+					Log.warning("ODataTreeBinding.addContexts(): The child node argument is not of type sap.ui.model.Context.");
 				}
 			}
 
@@ -3384,7 +3402,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				var oContext = vContextHandles[j];
 
 				if (!oContext || !(oContext instanceof sap.ui.model.Context)) {
-					jQuery.sap.log.warning("ODataTreeBindingFlat.addContexts(): no valid child context given!");
+					Log.warning("ODataTreeBindingFlat.addContexts(): no valid child context given!");
 					return;
 				}
 
@@ -3397,7 +3415,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				// We have a subtree handle for the given context.
 				// This means we have a cut out subtree and can re-insert it directly
 				if (oNewHandle && oNewHandle._isRemovedSubtree) {
-					jQuery.sap.log.info("ODataTreeBindingFlat.addContexts(): Existing context added '" + oContext.getPath() + "'");
+					Log.info("ODataTreeBindingFlat.addContexts(): Existing context added '" + oContext.getPath() + "'");
 
 					// set the parent node for the newly inserted sub-tree to match the new parent
 					oNewHandle._oNewParentNode = oNewParentNode;
@@ -3425,7 +3443,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 				} else {
 					// Context is unknown to the binding  -->  new context
 					// TODO: What to do with contexts, which are not created by this binding?
-					jQuery.sap.log.info("ODataTreeBindingFlat.addContexts(): Newly created context added.");
+					Log.info("ODataTreeBindingFlat.addContexts(): Newly created context added.");
 
 					this._ensureHierarchyNodeIDForContext(oContext);
 					var oFreshNode = {
@@ -3479,7 +3497,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 
 			this._fireChange({reason: ChangeReason.Add});
 		} else {
-			jQuery.sap.log.warning("The given parent context could not be found in the tree. No new sub-nodes were added!");
+			Log.warning("The given parent context could not be found in the tree. No new sub-nodes were added!");
 		}
 	};
 
@@ -3492,7 +3510,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 			// set unique node ID if the context was created and we did not assign an ID yet
 			var sNewlyGeneratedID = oContext.getProperty(this.oTreeProperties["hierarchy-node-for"]);
 			if (oContext.bCreated && !sNewlyGeneratedID) {
-				this.oModel.setProperty(this.oTreeProperties["hierarchy-node-for"], jQuery.sap.uid(), oContext);
+				this.oModel.setProperty(this.oTreeProperties["hierarchy-node-for"], uid(), oContext);
 			}
 		}
 	};
@@ -3577,7 +3595,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/Filter', 'sap/ui/model/TreeBin
 
 			return oContext;
 		} else {
-			jQuery.sap.log.warning("ODataTreeBinding.removeContexts(): The given context is not part of the tree. Was it removed already?");
+			Log.warning("ODataTreeBinding.removeContexts(): The given context is not part of the tree. Was it removed already?");
 		}
 	};
 

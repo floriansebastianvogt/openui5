@@ -2,8 +2,8 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './FlexBoxStylingHelper', 'sap/m/library'],
-	function(jQuery, FlexBoxStylingHelper, library) {
+sap.ui.define(['./FlexBoxStylingHelper', 'sap/m/library', "sap/base/Log"],
+	function(FlexBoxStylingHelper, library, Log) {
 	"use strict";
 
 	// shortcut for sap.m.FlexDirection
@@ -11,11 +11,6 @@ sap.ui.define(['jquery.sap.global', './FlexBoxStylingHelper', 'sap/m/library'],
 
 	// shortcut for sap.m.FlexRendertype
 	var FlexRendertype = library.FlexRendertype;
-
-	// Issue warning if flex algorithm is unsupported
-	if (!jQuery.support.flexBoxLayout && !jQuery.support.newFlexBoxLayout && !jQuery.support.ie10FlexBoxLayout) {
-		jQuery.sap.log.warning("This browser does not support flexible box layouts natively.");
-	}
 
 	/**
 	 * FlexBox renderer
@@ -155,7 +150,7 @@ sap.ui.define(['jquery.sap.global', './FlexBoxStylingHelper', 'sap/m/library'],
 		}
 
 		if (!(oLayoutData instanceof sap.m.FlexItemData)) {
-			jQuery.sap.log.warning(oLayoutData + " set on " + oItem + " is not of type sap.m.FlexItemData");
+			Log.warning(oLayoutData + " set on " + oItem + " is not of type sap.m.FlexItemData");
 		} else {
 			// FlexItemData is an element not a control, so we need to write id and style class ourselves if a wrapper tag is used
 			if (sWrapperTag && oLayoutData.getId()) {

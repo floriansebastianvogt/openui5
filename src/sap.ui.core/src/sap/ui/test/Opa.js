@@ -4,14 +4,14 @@
 
 /*global Math */
 sap.ui.define([
-	'jquery.sap.global',
 	'sap/ui/Device',
 	'./_LogCollector',
 	'./_OpaLogger',
 	'./_ParameterValidator',
 	'sap/ui/thirdparty/URI',
-	'sap/ui/test/_UsageReport'
-], function ($, Device, _LogCollector, _OpaLogger, _ParameterValidator, URI, _UsageReport) {
+	'sap/ui/test/_UsageReport',
+	"sap/ui/thirdparty/jquery"
+], function(Device, _LogCollector, _OpaLogger, _ParameterValidator, URI, _UsageReport, jQueryDOM) {
 	"use strict";
 
 	///////////////////////////////
@@ -203,12 +203,12 @@ sap.ui.define([
 	 */
 	var Opa = function(extensionObject) {
 		this.and = this;
-		$.extend(this, extensionObject);
+		jQueryDOM.extend(this, extensionObject);
 	};
 
 	/**
-	 * the global configuration of Opa.
-	 * All of the global values can be overwritten in an individual waitFor call.
+	 * The global configuration of Opa.
+	 * All of the global values can be overwritten in an individual <code>waitFor</code> call.
 	 * The default values are:
 	 * <ul>
 	 * 		<li>arrangements: A new Opa instance</li>
@@ -219,20 +219,20 @@ sap.ui.define([
 	 *		<li>debugTimeout: 0 seconds, infinite timeout by default. This will be used instead of timeout if running in debug mode.</li>
 	 * 		<li>asyncPolling: false</li>
 	 * </ul>
-	 * You can either directly manipulate the config, or extend it using {@link sap.ui.test.Opa.extendConfig}
+	 * You can either directly manipulate the config, or extend it using {@link sap.ui.test.Opa.extendConfig}.
 	 * @public
 	 */
 	Opa.config = {};
 
 	/**
-	 * Extends and overwrites default values of the {@link sap.ui.test.Opa.config}.
+	 * Extends and overwrites default values of the {@link sap.ui.test.Opa sap.ui.test.Opa.config} field.
 	 * Sample usage:
 	 * <pre>
 	 *     <code>
 	 *         var oOpa = new Opa();
 	 *
-	 *         // this statement will  will time out after 15 seconds and poll every 400ms.
-	 *         // those two values come from the defaults of {@link sap.ui.test.Opa.config}.
+	 *         // this statement will time out after 15 seconds and poll every 400ms
+	 *         // those two values come from the defaults of sap.ui.test.Opa.config
 	 *         oOpa.waitFor({
 	 *         });
 	 *
@@ -304,11 +304,17 @@ sap.ui.define([
 
 		// URI params overwrite default
 		// deep extend is necessary so appParams object is not overwritten but merged
-		Opa.config = $.extend(true, Opa.config, options, opaUriParams);
+		Opa.config = jQueryDOM.extend(true, Opa.config, options, opaUriParams);
 		_OpaLogger.setLevel(Opa.config.logLevel);
 	};
 
 	Opa._parseParam = function(sParam) {
+		if (sParam && sParam.match(/^true$/i)) {
+			return true;
+		}
+		if (sParam && sParam.match(/^false$/i)) {
+			return false;
+		}
 		var iValue = parseInt(sParam,10);
 		return (typeof iValue === 'number' && isNaN(iValue)) ? sParam : iValue;
 	};
@@ -373,7 +379,7 @@ sap.ui.define([
 	 * @since 1.25
 	 */
 	Opa.resetConfig = function () {
-		Opa.config = $.extend({
+		Opa.config = jQueryDOM.extend({
 			arrangements : new Opa(),
 			actions : new Opa(),
 			assertions : new Opa(),
@@ -412,7 +418,7 @@ sap.ui.define([
 		isEmptyQueueStarted = true;
 		oStopQueueOptions = null;
 
-		oQueueDeferred = $.Deferred();
+		oQueueDeferred = jQueryDOM.Deferred();
 		internalEmpty();
 
 		return oQueueDeferred.promise().fail(function (oOptions) {
@@ -516,10 +522,10 @@ sap.ui.define([
 		 * If an error occurs, the promise is rejected with the options object. A detailed error message containing the stack trace and Opa logs is available in options.errorMessage.
 		 */
 		waitFor : function (options) {
-			var deferred = $.Deferred(),
+			var deferred = jQueryDOM.Deferred(),
 				oFilteredConfig = Opa._createFilteredConfig(Opa._aConfigValuesForWaitFor);
 
-			options = $.extend({},
+			options = jQueryDOM.extend({},
 				oFilteredConfig,
 				options);
 
@@ -530,7 +536,7 @@ sap.ui.define([
 
 			// create a new deferred for each new queue element and decorate a copy of this which will be returned in the end
 			// this way a promise result handler can be attached to any waitFor statement at any time
-			var _this = $.extend({}, this);
+			var _this = jQueryDOM.extend({}, this);
 			deferred.promise(_this);
 
 			queue.push({

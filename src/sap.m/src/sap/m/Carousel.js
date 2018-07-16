@@ -4,25 +4,28 @@
 
 // Provides control sap.m.Carousel.
 sap.ui.define([
-	'jquery.sap.global',
 	'./library',
 	'sap/ui/core/Control',
 	'sap/ui/Device',
 	'sap/ui/core/ResizeHandler',
 	'sap/ui/core/library',
 	'./CarouselRenderer',
+	"sap/ui/events/KeyCodes",
+	"sap/base/Log",
+	"sap/ui/events/F6Navigation",
 	'sap/ui/thirdparty/mobify-carousel',
-	'sap/ui/core/IconPool',
-	'jquery.sap.keycodes'
+	'sap/ui/core/IconPool'
 ],
 function(
-	jQuery,
 	library,
 	Control,
 	Device,
 	ResizeHandler,
 	coreLibrary,
-	CarouselRenderer
+	CarouselRenderer,
+	KeyCodes,
+	Log,
+	F6Navigation
 	/*, mobifycarousel, IconPool (indirect dependency, kept for compatibility with tests, to be fixed in ImageHelper) */
 ) {
 	"use strict";
@@ -394,7 +397,7 @@ function(
 				// BCP: 1580078315
 				if (sap.zen && sap.zen.commons && this.getParent() instanceof sap.zen.commons.layout.PositionContainer) {
 					if (this._isCarouselUsedWithCommonsLayout === undefined){
-						jQuery.sap.delayedCall(0, this, "invalidate");
+						setTimeout(this["invalidate"].bind(this), 0);
 						this._isCarouselUsedWithCommonsLayout = true;
 					}
 				}
@@ -421,7 +424,7 @@ function(
 
 		this._sResizeListenerId = ResizeHandler.register(this._$InnerDiv, this._fnAdjustAfterResize);
 
-		// Fixes wrong focusing in IE
+		// Fixes wrong focusing in IE// TODO remove after 1.62 version
 		// BCP: 1670008915
 		this.$().find('.sapMCrslItemTableCell').focus(function(e) {
 
@@ -503,7 +506,7 @@ function(
 		this.setAssociation("activePage", sNewActivePageId, true);
 		var sTextBetweenNumbers = sap.ui.getCore().getLibraryResourceBundle("sap.m").getText("CAROUSEL_PAGE_INDICATOR_TEXT", [iNewPageIndex, this.getPages().length]);
 
-		jQuery.sap.log.debug("sap.m.Carousel: firing pageChanged event: old page: " + sOldActivePageId
+		Log.debug("sap.m.Carousel: firing pageChanged event: old page: " + sOldActivePageId
 				+ ", new page: " + sNewActivePageId);
 
 		// close the soft keyboard
@@ -723,7 +726,7 @@ function(
 		if (this._oMobifyCarousel) {
 			this._oMobifyCarousel.prev();
 		} else {
-			jQuery.sap.log.warning("Unable to execute sap.m.Carousel.previous: carousel must be rendered first.");
+			Log.warning("Unable to execute sap.m.Carousel.previous: carousel must be rendered first.");
 		}
 		return this;
 	};
@@ -739,7 +742,7 @@ function(
 		if (this._oMobifyCarousel) {
 			this._oMobifyCarousel.next();
 		} else {
-			jQuery.sap.log.warning("Unable to execute sap.m.Carousel.next: carousel must be rendered first.");
+			Log.warning("Unable to execute sap.m.Carousel.next: carousel must be rendered first.");
 		}
 		return this;
 	};
@@ -829,7 +832,7 @@ function(
 	 */
 	Carousel.prototype.onkeydown = function(oEvent) {
 
-		if (oEvent.keyCode == jQuery.sap.KeyCodes.F7) {
+		if (oEvent.keyCode == KeyCodes.F7) {
 			this._handleF7Key(oEvent);
 			return;
 		}
@@ -844,13 +847,13 @@ function(
 			// Minus keys
 			// TODO  jQuery.sap.KeyCodes.MINUS is not returning 189
 			case 189:
-			case jQuery.sap.KeyCodes.NUMPAD_MINUS:
+			case KeyCodes.NUMPAD_MINUS:
 				this._fnSkipToIndex(oEvent, -1);
 				break;
 
 			// Plus keys
-			case jQuery.sap.KeyCodes.PLUS:
-			case jQuery.sap.KeyCodes.NUMPAD_PLUS:
+			case KeyCodes.PLUS:
+			case KeyCodes.NUMPAD_PLUS:
 				this._fnSkipToIndex(oEvent, 1);
 				break;
 		}
@@ -1037,10 +1040,10 @@ function(
 		this.$().focus();
 
 		oEventF6.target = oEvent.target;
-		oEventF6.keyCode = jQuery.sap.KeyCodes.F6;
+		oEventF6.keyCode = KeyCodes.F6;
 		oEventF6.shiftKey = bShiftKey;
 
-		jQuery.sap.handleF6GroupNavigation(oEventF6);
+		F6Navigation.handleF6GroupNavigation(oEventF6);
 	};
 
 	/**
@@ -1107,7 +1110,7 @@ function(
 	Carousel.prototype._handleF7Key = function (oEvent) {
 		var oActivePageLastFocusedElement;
 
-		// Needed for IE
+		// Needed for IE// TODO remove after 1.62 version
 		oEvent.preventDefault();
 
 		oActivePageLastFocusedElement = this._getActivePageLastFocusedElement();
@@ -1134,7 +1137,7 @@ function(
 	 * @public
 	 */
 	Carousel.prototype.setShowBusyIndicator = function() {
-		jQuery.sap.log.warning("sap.m.Carousel: Deprecated function 'setShowBusyIndicator' called. Does nothing.");
+		Log.warning("sap.m.Carousel: Deprecated function 'setShowBusyIndicator' called. Does nothing.");
 		return this;
 	};
 
@@ -1146,7 +1149,7 @@ function(
 	 * @public
 	 */
 	Carousel.prototype.getShowBusyIndicator = function() {
-		jQuery.sap.log.warning("sap.m.Carousel: Deprecated function 'getShowBusyIndicator' called. Does nothing.");
+		Log.warning("sap.m.Carousel: Deprecated function 'getShowBusyIndicator' called. Does nothing.");
 		return false;
 	};
 

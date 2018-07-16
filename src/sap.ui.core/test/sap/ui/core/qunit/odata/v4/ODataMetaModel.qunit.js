@@ -23,11 +23,12 @@ sap.ui.require([
 	"sap/ui/model/odata/v4/ODataModel",
 	"sap/ui/model/odata/v4/ValueListType",
 	"sap/ui/test/TestUtils",
-	"sap/ui/thirdparty/URI"
+	"sap/ui/thirdparty/URI",
+	"sap/base/Log"
 ], function (jQuery, SyncPromise, BindingMode, ChangeReason, ClientListBinding, BaseContext,
 		ContextBinding, Filter, MetaModel, PropertyBinding, Sorter, OperationMode, Int64, Raw,
 		AnnotationHelper, Context, _Helper, ODataMetaModel, ODataModel, ValueListType, TestUtils,
-		URI) {
+		URI, Log) {
 	/*global QUnit, sinon */
 	/*eslint max-nested-callbacks: 0, no-loop-func: 0, no-warning-comments: 0 */
 	"use strict";
@@ -686,14 +687,14 @@ sap.ui.require([
 		 * Allow warnings if told to; always suppress debug messages.
 		 */
 		allowWarnings : function (assert, bWarn) {
-			this.mock(jQuery.sap.log).expects("isLoggable").atLeast(1)
+			this.mock(Log).expects("isLoggable").atLeast(1)
 				.withExactArgs(sinon.match.number, sODataMetaModel)
 				.callsFake(function (iLogLevel) {
 					switch (iLogLevel) {
-						case jQuery.sap.log.Level.DEBUG:
+						case Log.Level.DEBUG:
 							return false;
 
-						case jQuery.sap.log.Level.WARNING:
+						case Log.Level.WARNING:
 							return bWarn;
 
 						default:
@@ -708,7 +709,7 @@ sap.ui.require([
 				},
 				sUrl = "/a/b/c/d/e/$metadata";
 
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 
@@ -727,7 +728,7 @@ sap.ui.require([
 		 */
 		expectDebug : function (bDebug, sMessage, sPath) {
 			this.oLogMock.expects("isLoggable")
-				.withExactArgs(jQuery.sap.log.Level.DEBUG, sODataMetaModel).returns(bDebug);
+				.withExactArgs(Log.Level.DEBUG, sODataMetaModel).returns(bDebug);
 			this.oLogMock.expects("debug").exactly(bDebug ? 1 : 0)
 				.withExactArgs(sMessage, sPath, sODataMetaModel);
 		},
@@ -1310,7 +1311,7 @@ sap.ui.require([
 				this.oMetaModelMock.expects("fetchEntityContainer")
 					.returns(SyncPromise.resolve(mScope));
 				this.oLogMock.expects("isLoggable")
-					.withExactArgs(jQuery.sap.log.Level.WARNING, sODataMetaModel).returns(bWarn);
+					.withExactArgs(Log.Level.WARNING, sODataMetaModel).returns(bWarn);
 				this.oLogMock.expects("warning").exactly(bWarn ? 1 : 0)
 					.withExactArgs(sWarning, sPath, sODataMetaModel);
 
@@ -1340,7 +1341,7 @@ sap.ui.require([
 				this.oMetaModelMock.expects("fetchEntityContainer")
 					.returns(SyncPromise.resolve(mScope));
 				this.oLogMock.expects("isLoggable")
-					.withExactArgs(jQuery.sap.log.Level.DEBUG, sODataMetaModel).returns(bDebug);
+					.withExactArgs(Log.Level.DEBUG, sODataMetaModel).returns(bDebug);
 				this.oLogMock.expects("debug").exactly(bDebug ? 1 : 0)
 					.withExactArgs(sMessage, sPath, sODataMetaModel);
 
@@ -1389,7 +1390,7 @@ sap.ui.require([
 	});
 
 	//*********************************************************************************************
-	(function () {
+	["@@computedAnnotation", "@@.computedAnnotation"].forEach(function (sSuffix) {
 		var sPath,
 			sPathPrefix,
 			mPathPrefix2SchemaChildName = {
@@ -1400,11 +1401,12 @@ sap.ui.require([
 			sSchemaChildName;
 
 		for (sPathPrefix in mPathPrefix2SchemaChildName) {
-			sPath = sPathPrefix + "@@.computedAnnotation";
+			sPath = sPathPrefix + sSuffix;
 			sSchemaChildName = mPathPrefix2SchemaChildName[sPathPrefix];
 
 			QUnit.test("fetchObject: " + sPath, function (assert) {
-				var fnComputedAnnotation,
+				var $$valueAsPromise = {/*false, true*/},
+					fnComputedAnnotation,
 					oContext,
 					oInput,
 					oResult = {},
@@ -1419,12 +1421,16 @@ sap.ui.require([
 				fnComputedAnnotation = this.mock(oScope).expects("computedAnnotation");
 				fnComputedAnnotation
 					.withExactArgs(oInput, sinon.match({
+						$$valueAsPromise : sinon.match.same($$valueAsPromise),
 						context : sinon.match.object,
 						schemaChildName : sSchemaChildName
 					})).returns(oResult);
 
 				// code under test
-				oSyncPromise = this.oMetaModel.fetchObject(sPath, null, {scope : oScope});
+				oSyncPromise = this.oMetaModel.fetchObject(sPath, null, {
+					$$valueAsPromise : $$valueAsPromise,
+					scope : oScope
+				});
 
 				assert.strictEqual(oSyncPromise.isFulfilled(), true);
 				assert.strictEqual(oSyncPromise.getResult(), oResult);
@@ -1435,7 +1441,7 @@ sap.ui.require([
 				assert.strictEqual(oContext.getObject(), oInput);
 			});
 		}
-	}());
+	});
 
 	//*********************************************************************************************
 	[false, true].forEach(function (bWarn) {
@@ -1449,7 +1455,7 @@ sap.ui.require([
 			this.mock(AnnotationHelper).expects("isMultiple")
 				.throws(oError);
 			this.oLogMock.expects("isLoggable")
-				.withExactArgs(jQuery.sap.log.Level.WARNING, sODataMetaModel).returns(bWarn);
+				.withExactArgs(Log.Level.WARNING, sODataMetaModel).returns(bWarn);
 			this.oLogMock.expects("warning").exactly(bWarn ? 1 : 0).withExactArgs(
 				"Error calling sap.ui.model.odata.v4.AnnotationHelper.isMultiple: " + oError,
 				sPath, sODataMetaModel);
@@ -1582,7 +1588,7 @@ sap.ui.require([
 
 			this.expectFetchEntityContainer(mMostlyEmptyScope);
 			this.oLogMock.expects("isLoggable")
-				.withExactArgs(jQuery.sap.log.Level.WARNING, sODataMetaModel).returns(bWarn);
+				.withExactArgs(Log.Level.WARNING, sODataMetaModel).returns(bWarn);
 			this.oLogMock.expects("warning").exactly(bWarn ? 1 : 0)
 				.withExactArgs("Unknown qualified name not.found", sPath, sODataMetaModel);
 
@@ -2436,7 +2442,7 @@ sap.ui.require([
 			}
 			if (oFixture.warning) {
 				this.oLogMock.expects("isLoggable")
-					.withExactArgs(jQuery.sap.log.Level.WARNING, sODataMetaModel)
+					.withExactArgs(Log.Level.WARNING, sODataMetaModel)
 					.returns(true);
 				this.oLogMock.expects("warning")
 					.withExactArgs(oFixture.warning, oFixture.dataPath, sODataMetaModel);
@@ -2654,29 +2660,30 @@ sap.ui.require([
 			},
 			sPath = "foo",
 			oValue = {},
-			oPromise = SyncPromise.resolve(Promise.resolve(oValue));
+			oPromise,
+			oSyncPromise = SyncPromise.resolve(Promise.resolve(oValue));
 
 		oBinding = this.oMetaModel.bindProperty(sPath, oContext, mParameters);
-		oBinding.vValue = oValue;
 
 		this.oMetaModelMock.expects("fetchObject")
 			.withExactArgs(sPath, sinon.match.same(oContext), sinon.match.same(mParameters))
-			.returns(oPromise);
+			.returns(oSyncPromise);
 		this.mock(oBinding).expects("_fireChange")
-			.withExactArgs({reason : "Foo"})
+			.withExactArgs({reason : ChangeReason.Change})
 			.twice()
 			.onFirstCall().callsFake(function () {
-				assert.ok(oBinding.getValue().isPending(), "Value is still a pending SyncPromise");
+				oPromise = oBinding.getValue();
+				assert.ok(oPromise instanceof Promise, "Value is a Promise");
 			})
 			.onSecondCall().callsFake(function () {
 				assert.strictEqual(oBinding.getValue(), oValue, "Value resolved");
 			});
 
-		// code under test
-		oBinding.checkUpdate(false, "Foo");
+		// code under test - calls oBinding.checkUpdate(true)
+		oBinding.initialize();
 
-		assert.ok(oBinding.getValue().isPending(), "Value is a pending SyncPromise");
-		return oBinding.getValue().then(function (oResult) {
+		assert.strictEqual(oBinding.getValue(), oPromise, "Value is the pending Promise");
+		return oPromise.then(function (oResult) {
 			assert.strictEqual(oResult, oValue);
 			assert.strictEqual(oBinding.getValue(), oValue);
 		});
@@ -2879,18 +2886,22 @@ sap.ui.require([
 
 	//*********************************************************************************************
 	QUnit.test("ODataMetaListBinding#update (async)", function (assert) {
-		var oBinding,
+		var done = assert.async(),
+			oBinding,
 			oBindingMock,
 			oContext = this.oMetaModel.getContext("/EMPLOYEES"),
 			aContexts = [{}],
 			sPath = "path",
 			oFetchPromise = SyncPromise.resolve(Promise.resolve()).then(function () {
 				// This is expected to happen after the promise is resolved
-				oBindingMock.expects("setContexts").withExactArgs(sinon.match.same(aContexts));
-				oBindingMock.expects("_fireChange").withExactArgs({reason : ChangeReason.Change});
+				oBindingMock.expects("setContexts").withExactArgs(sinon.match.same(aContexts))
+					.callThrough();
+				oBindingMock.expects("_fireChange").withExactArgs({reason : ChangeReason.Change})
+					.callThrough();
 
 				return aContexts;
-			});
+			}),
+			aResult;
 
 		// avoid request to backend during initialization
 		this.oMetaModelMock.expects("fetchObject").returns(SyncPromise.resolve());
@@ -2899,13 +2910,25 @@ sap.ui.require([
 		oBindingMock = this.mock(oBinding);
 
 		oBindingMock.expects("fetchContexts").withExactArgs().returns(oFetchPromise);
-		oBindingMock.expects("setContexts").withExactArgs([]);
+		oBindingMock.expects("setContexts").withExactArgs(sinon.match(function (aContexts) {
+			return aContexts.length === 0 && aContexts.dataRequested === true;
+		})).callThrough();
 		oBindingMock.expects("_fireChange").never(); // initially
 
 		// code under test
 		oBinding.update();
 
-		return oFetchPromise;
+		aResult = oBinding.getContexts();
+		assert.strictEqual(aResult.length, 0);
+		assert.strictEqual(aResult.dataRequested, true);
+
+		oBinding.attachEventOnce("change", function () {
+			aResult = oBinding.getContexts();
+			assert.strictEqual(aResult.length, 1);
+			assert.strictEqual(aResult[0], aContexts[0]);
+			assert.notOk("dataRequested" in aResult);
+			done();
+		});
 	});
 
 	//*********************************************************************************************
@@ -3010,10 +3033,10 @@ sap.ui.require([
 			"/EMPLOYEES/SALÃRY"
 		]
 	}, {
-		// <template:repeat list="{meta>EMPLOYEES}" ...>
-		// same as before, but with non-empty path
+		// <template:repeat list="{meta>EMPLOYEES/}" ...>
+		// same as before, but with non-empty path and a trailing slash
 		contextPath : "/",
-		metaPath : "EMPLOYEES",
+		metaPath : "EMPLOYEES/",
 		result : [
 			"/EMPLOYEES/ID",
 			"/EMPLOYEES/AGE",
@@ -3089,7 +3112,7 @@ sap.ui.require([
 				// Note that _getContexts is called twice in this test: once from bindList via the
 				// constructor, once directly from the test
 				this.oLogMock.expects("isLoggable").twice()
-					.withExactArgs(jQuery.sap.log.Level.WARNING, sODataMetaModel)
+					.withExactArgs(Log.Level.WARNING, sODataMetaModel)
 					.returns(true);
 				this.oLogMock.expects("warning").twice()
 					.withExactArgs(oFixture.warning[0], oFixture.warning[1], sODataMetaModel);

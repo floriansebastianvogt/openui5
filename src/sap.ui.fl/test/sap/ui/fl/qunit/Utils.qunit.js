@@ -7,8 +7,8 @@ sap.ui.require([
 	'sap/ui/layout/VerticalLayout',
 	'sap/ui/layout/HorizontalLayout',
 	'sap/m/Button',
+	'sap/ui/Device',
 	'sap/ui/thirdparty/hasher',
-	// should be last:
 	'sap/ui/thirdparty/sinon'
 ],
 function(
@@ -16,6 +16,7 @@ function(
 	VerticalLayout,
 	HorizontalLayout,
 	Button,
+	Device,
 	hasher,
 	sinon
 ){
@@ -905,6 +906,21 @@ function(
 		assert.deepEqual(Utils.getParsedURLHash(), oParameters, "then the url parameters calculated from the url are received");
 	});
 
+	QUnit.test("when calling 'getParsedURLHash' with a ushell container and a URL which cannot be parsed properly", function(assert){
+		sandbox.stub(Utils, "getUshellContainer", function() {
+			return {
+				getService: function () {
+					return {
+						getHash: function () { },
+						parseShellHash: function (sHash) { }
+					};
+				}
+			};
+		});
+
+		assert.ok(jQuery.isEmptyObject(Utils.getParsedURLHash()), "then an empty object is received");
+	});
+
 	QUnit.test("when calling 'getParsedURLHash' without a ushell container", function(assert){
 		assert.ok(jQuery.isEmptyObject(Utils.getParsedURLHash()), "then no url parameters are received");
 	});
@@ -1245,7 +1261,6 @@ function(
 	});
 
 	QUnit.test("getFlexReference returns the componentName if it exists and variantId does not exist", function (assert) {
-
 		var sComponentName = "componentName";
 		var sAppId = "appId";
 		var oManifest = {
@@ -1265,7 +1280,6 @@ function(
 	});
 
 	QUnit.test("getFlexReference returns the appId if neither the variantId nor the componentName exist", function (assert) {
-
 		var sAppId = "appId";
 		var oManifest = {
 			"sap.app": {
@@ -1281,7 +1295,6 @@ function(
 	});
 
 	QUnit.test("getFlexReference returns the value from getComponentName function if neither the sap.ui5.variantId nor the sap.ui5.componentName exist and sap.app.id is at design time", function (assert) {
-
 		var sAppId = Utils.APP_ID_AT_DESIGN_TIME;
 		var sComName = "comName";
 		var oManifest = {
@@ -1307,7 +1320,6 @@ function(
 	});
 
 	QUnit.test("getAppVersionFromManifest returns the application version from manifest", function (assert) {
-
 		var sAppVersion = "1.2.3";
 		var oManifestJson = {
 			"sap.app": {
@@ -1330,6 +1342,28 @@ function(
 		assert.equal(Utils.getAppVersionFromManifest(oManifest), sAppVersion, "if the manifest object was passed");
 		assert.equal(Utils.getAppVersionFromManifest(oManifestJson), sAppVersion, "if the manifest json data was passed");
 		assert.equal(Utils.getAppVersionFromManifest(), "", "if nothing was passed, return empty string");
+	});
+
+	QUnit.test("getODataServiceUriFromManifest returns the OData service uri from manifest", function(assert) {
+		var oLogStub = sandbox.stub(Utils.log, "warning");
+		var sUri = "ODataUri";
+		var oManifest = {
+			"sap.app": {
+				dataSources : {
+					mainService: {
+						uri: sUri
+					}
+				}
+			},
+			getEntry: function (key) {
+				return this[key];
+			}
+		};
+
+		assert.equal(Utils.getODataServiceUriFromManifest(oManifest), sUri, "if the manifest object was passed");
+		assert.equal(oLogStub.callCount, 0, "no warning was logged");
+		assert.equal(Utils.getODataServiceUriFromManifest(), "", "if nothing was passed, return empty string");
+		assert.equal(oLogStub.callCount, 1, "1 warning was logged");
 	});
 
 	QUnit.module("Utils.execPromiseQueueSequentially", {
@@ -1593,4 +1627,35 @@ function(
 			);
 		});
 	});
+
+	QUnit.module("Utils.isCorrectAppVersionFormat", function () {
+		QUnit.test("when called with an empty appversion", function(assert) {
+			assert.notOk(Utils.isCorrectAppVersionFormat(""), "then the format of the app version is not correct");
+		});
+
+		QUnit.test("when called with a number after the version", function(assert) {
+			assert.notOk(Utils.isCorrectAppVersionFormat("1.2.333336"), "then the format of the app version is not correct");
+		});
+
+		QUnit.test("when called with a dot after the version", function(assert) {
+			assert.notOk(Utils.isCorrectAppVersionFormat("1.2.33333.678"), "then the format of the app version is not correct");
+		});
+
+		QUnit.test("when called with more than 5 digits", function(assert) {
+			assert.notOk(Utils.isCorrectAppVersionFormat("1.222222.3"), "then the format of the app version is not correct");
+		});
+
+		QUnit.test("when called with a version without snapshot", function(assert) {
+			assert.ok(Utils.isCorrectAppVersionFormat("1.2.3"), "then the format of the app version is correct");
+		});
+
+		QUnit.test("when called with a version with snapshot", function(assert) {
+			assert.ok(Utils.isCorrectAppVersionFormat("1.2.3-SNAPSHOT"), "then the format of the app version is correct");
+		});
+
+		QUnit.test("when called with placeholder without a scenario", function(assert) {
+			assert.notOk(Utils.isCorrectAppVersionFormat("${project.version}"), "then the format of the app version is not valid");
+		});
+	});
+
 });

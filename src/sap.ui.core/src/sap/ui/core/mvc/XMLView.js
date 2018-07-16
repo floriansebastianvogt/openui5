@@ -4,32 +4,38 @@
 
 // Provides control sap.ui.core.mvc.XMLView.
 sap.ui.define([
-    'jquery.sap.global',
-    './View',
-    "./XMLViewRenderer",
-	"sap/base/util/extend",
-    'sap/ui/base/ManagedObject',
-    'sap/ui/core/XMLTemplateProcessor',
-    'sap/ui/core/library',
-    'sap/ui/core/Control',
-    'sap/ui/core/RenderManager',
-    'sap/ui/core/cache/CacheManager',
-    'sap/ui/model/resource/ResourceModel',
-    'jquery.sap.xml',
-    'jquery.sap.script'
+	'jquery.sap.global',
+	'./View',
+	"./XMLViewRenderer",
+	"sap/base/util/merge",
+	'sap/ui/base/ManagedObject',
+	'sap/ui/core/XMLTemplateProcessor',
+	'sap/ui/core/library',
+	'sap/ui/core/Control',
+	'sap/ui/core/RenderManager',
+	'sap/ui/core/cache/CacheManager',
+	'sap/ui/model/resource/ResourceModel',
+	"sap/ui/thirdparty/jquery",
+	"sap/ui/util/XMLHelper",
+	"sap/base/strings/hash",
+		"sap/base/Log"
 ],
 	function(
-	    jQuery,
+		jQuery,
 		View,
 		XMLViewRenderer,
-		extend,
+		merge,
 		ManagedObject,
 		XMLTemplateProcessor,
 		library,
 		Control,
 		RenderManager,
 		Cache,
-		ResourceModel /* , jQuerySap */
+		ResourceModel,
+		jQueryDOM,
+		XMLHelper,
+		hash,
+		Log
 	) {
 	"use strict";
 
@@ -181,7 +187,7 @@ sap.ui.define([
 		 * @return {Promise} a Promise that resolves with the view instance and rejects with any thrown error.
 		 */
 		XMLView.create = function (mOptions) {
-			var mParameters = extend(true, {}, mOptions);
+			var mParameters = merge({}, mOptions);
 
 			// mapping renamed parameters
 			mParameters.viewContent = mParameters.definition;
@@ -252,7 +258,7 @@ sap.ui.define([
 			// keep the content as a pseudo property to make cloning work but without supporting mutation
 			// TODO model this as a property as soon as write-once-during-init properties become available
 			oView.mProperties["viewContent"] = mSettings.viewContent;
-			var xContent = jQuery.sap.parseXML(mSettings.viewContent);
+			var xContent = XMLHelper.parse(mSettings.viewContent);
 			validatexContent(xContent);
 			return xContent.documentElement;
 		}
@@ -309,7 +315,7 @@ sap.ui.define([
 
 			return validateCacheKey(oView, aFutureKeyParts).then(function(sKey) {
 				return {
-					key: sKey +  "(" + jQuery.sap.hashCode(sManifest || "") + ")",
+					key: sKey +  "(" + hash(sManifest || "") + ")",
 					componentManifest: sManifest,
 					additionalData: mCacheSettings.additionalData
 				};
@@ -387,8 +393,8 @@ sap.ui.define([
 				return sTimestamp;
 			}).catch(function(error) {
 				// Do not populate the cache if the version info could not be retrieved.
-				jQuery.sap.log.warning("sap.ui.getVersionInfo could not be retrieved", "sap.ui.core.mvc.XMLView");
-				jQuery.sap.log.debug(error);
+				Log.warning("sap.ui.getVersionInfo could not be retrieved", "sap.ui.core.mvc.XMLView");
+				Log.debug(error);
 				return "";
 			});
 		}
@@ -397,7 +403,7 @@ sap.ui.define([
 			// we don't want to write the key into the cache
 			var sKey = mCacheInput.key;
 			delete mCacheInput.key;
-			mCacheInput.xml = jQuery.sap.serializeXML(xContent);
+			mCacheInput.xml = XMLHelper.serialize(xContent);
 			return Cache.set(sKey, mCacheInput);
 		}
 
@@ -405,7 +411,7 @@ sap.ui.define([
 			return Cache.get(mCacheInput.key).then(function(mCacheOutput) {
 				// double check manifest to eliminate issues with hash collisions
 				if (mCacheOutput && mCacheOutput.componentManifest == mCacheInput.componentManifest) {
-					mCacheOutput.xml = jQuery.sap.parseXML(mCacheOutput.xml, "application/xml").documentElement;
+					mCacheOutput.xml = XMLHelper.parse(mCacheOutput.xml, "application/xml").documentElement;
 					if (mCacheOutput.additionalData) {
 						// extend the additionalData which was passed into cache configuration dynamically
 						jQuery.extend(true, mCacheInput.additionalData, mCacheOutput.additionalData);
@@ -439,7 +445,7 @@ sap.ui.define([
 					XMLTemplateProcessor.parseViewAttributes(xContent, that, mSettingsFromXML);
 					if (!mSettings.async) {
 						// extend mSettings which get applied implicitly during view constructor
-						jQuery.sap.extend(mSettings, mSettingsFromXML);
+						Object.assign(mSettings, mSettingsFromXML);
 					} else {
 						// apply the settings from the loaded view source via an explicit call
 						that.applySettings(mSettingsFromXML);
@@ -469,6 +475,7 @@ sap.ui.define([
 			}
 
 			function loadResourceAsync(sResourceName) {
+				//TODO: global jquery call found
 				return jQuery.sap.loadResource(sResourceName, {async: true}).then(function(oData) {
 					return oData.documentElement; // result is the document node
 				});
@@ -495,8 +502,8 @@ sap.ui.define([
 				}).catch(function(error) {
 					if (error.name === sXMLViewCacheError) {
 						// no sufficient cache keys, processing can continue
-						jQuery.sap.log.debug(error.message, error.name, "sap.ui.core.mvc.XMLView");
-						jQuery.sap.log.debug("Processing the View without caching.", "sap.ui.core.mvc.XMLView");
+						Log.debug(error.message, error.name, "sap.ui.core.mvc.XMLView");
+						Log.debug("Processing the View without caching.", "sap.ui.core.mvc.XMLView");
 						return processResource(sResourceName);
 					} else {
 						// an unknown error occured and should be exposed
@@ -518,6 +525,7 @@ sap.ui.define([
 
 			// either template name or XML node is given
 			if (mSettings.viewName) {
+				//TODO: global jquery call found
 				var sResourceName = jQuery.sap.getResourceName(mSettings.viewName, ".view.xml");
 				if (mSettings.async) {
 					// in async mode we need to return here as processing takes place in Promise callbacks
@@ -527,6 +535,7 @@ sap.ui.define([
 						return loadResourceAsync(sResourceName).then(runPreprocessorsAsync).then(processView);
 					}
 				} else {
+					//TODO: global jquery call found
 					_xContent = jQuery.sap.loadResource(sResourceName).documentElement;
 				}
 			} else if (mSettings.viewContent) {
@@ -619,17 +628,17 @@ sap.ui.define([
 
 						// get DOM or invisible placeholder for child
 						var oChildDOM = aChildren[i].getDomRef() ||
-										jQuery.sap.domById(RenderPrefixes.Invisible + aChildren[i].getId());
+										((RenderPrefixes.Invisible + aChildren[i].getId() ? window.document.getElementById(RenderPrefixes.Invisible + aChildren[i].getId()) : null));
 
 						// if DOM exists, replace the preservation dummy with it
 						if ( oChildDOM ) {
-							jQuery.sap.byId(RenderPrefixes.Dummy + aChildren[i].getId(), this._$oldContent).replaceWith(oChildDOM);
+							jQueryDOM(document.getElementById(RenderPrefixes.Dummy + aChildren[i].getId())).replaceWith(oChildDOM);
 						} // otherwise keep the dummy placeholder
 					}
 				}
 				// move preserved DOM into place
 				// jQuery.sap.log.debug("moving preserved dom into place for " + this);
-				jQuery.sap.byId(RenderPrefixes.Dummy + this.getId()).replaceWith(this._$oldContent);
+				jQueryDOM(document.getElementById(RenderPrefixes.Dummy + this.getId())).replaceWith(this._$oldContent);
 			}
 			this._$oldContent = undefined;
 		};
@@ -693,7 +702,7 @@ sap.ui.define([
 			if (XMLView.PreprocessorType[sType]) {
 				View.registerPreprocessor(XMLView.PreprocessorType[sType], vPreprocessor, this.getMetadata().getClass()._sType, bSyncSupport, bOnDemand, mSettings);
 			} else {
-				jQuery.sap.log.error("Preprocessor could not be registered due to unknown sType \"" + sType + "\"", this.getMetadata().getName());
+				Log.error("Preprocessor could not be registered due to unknown sType \"" + sType + "\"", this.getMetadata().getName());
 			}
 		};
 

@@ -65,6 +65,12 @@
 	}
 }
 
+/* Dragged Filter Item */
+
+.sapMITBItem.sapUiDnDDragging {
+	background: @sapUiObjectHeaderBackground;
+}
+
 /* ------------------------------------------------ */
 /* IconTabBar tab class                             */
 /* ------------------------------------------------ */
@@ -607,6 +613,11 @@
 		padding-right: 0.25rem;
 		outline: none;
 	}
+
+	.sapMBtn.sapMBtnDragOver .sapMBtnInner {
+		background: @sapUiDragAndDropActiveBackground;
+		border: 0.125rem solid @sapUiDragAndDropActiveBorderColor;
+	}
 }
 
 .sapMITBScrollable.sapMITH .sapMBtn {
@@ -1134,6 +1145,18 @@ html.sap-phone  {
 		&.sapMITBVertical > .sapMITBTab {
 			line-height: 2rem;
 		}
+
+		&.sapMITBHorizontal > .sapMITBTab {
+			line-height: 2rem;
+		}
+		&.sapMITBHorizontal > .sapMITBContentArrow {
+			height: 0.75rem;
+		}
+		&.sapMITBHorizontal.sapMITBItem:focus.sapMITBAll {
+			&::after {
+				bottom: 0rem;
+			}
+		}
 	}
 
 	.sapMITBContentArrow {
@@ -1145,7 +1168,7 @@ html.sap-phone  {
 	}
 
 	.sapMITBHorizontal {
-
+		height: 2.75rem;
 		&.sapMITBFilter {
 			height: 2.75rem;
 			padding: 0 0.5rem;
@@ -1170,6 +1193,13 @@ html.sap-phone  {
 			> .sapMITBContentArrow {
 				width: 2rem;
 			}
+		}
+		> .sapMITBTab {
+			height: 2rem;
+		}
+
+		&.sapMITBFilter > .sapMITBText + .sapMITBContentArrow {
+			height: 0.5rem;
 		}
 	}
 

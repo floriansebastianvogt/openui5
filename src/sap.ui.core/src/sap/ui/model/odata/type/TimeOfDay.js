@@ -3,15 +3,20 @@
  */
 
 sap.ui.define([
-	"jquery.sap.global",
-	"jquery.sap.strings",
 	"sap/ui/core/format/DateFormat",
 	"sap/ui/model/FormatException",
 	"sap/ui/model/ParseException",
 	"sap/ui/model/ValidateException",
-	"sap/ui/model/odata/type/ODataType"
-], function(jQuery, jQuerySapStrings, DateFormat, FormatException, ParseException,
-		ValidateException, ODataType) {
+	"sap/ui/model/odata/type/ODataType",
+	"sap/base/Log"
+], function(
+	DateFormat,
+	FormatException,
+	ParseException,
+	ValidateException,
+	ODataType,
+	Log
+) {
 	"use strict";
 
 	/*
@@ -24,7 +29,7 @@ sap.ui.define([
 	 */
 	function getErrorMessage(oType) {
 		return sap.ui.getCore().getLibraryResourceBundle().getText("EnterTime",
-			[oType.formatValue("13:47:26", "string")]);
+			[oType.formatValue("23:59:58", "string")]);
 	}
 
 	/*
@@ -42,7 +47,7 @@ sap.ui.define([
 		if (!oType.oModelFormat) {
 			iPrecision = oType.oConstraints && oType.oConstraints.precision;
 			if (iPrecision) {
-				sPattern += "." + jQuery.sap.padRight("", "S", iPrecision);
+				sPattern += "." + "".padEnd(iPrecision, "S");
 			}
 			oType.oModelFormat = DateFormat.getTimeInstance({pattern : sPattern,
 				strictParsing : true, UTC : true});
@@ -95,13 +100,13 @@ sap.ui.define([
 			if (vNullable === false) {
 				oType.oConstraints = {nullable : false};
 			} else if (vNullable !== undefined && vNullable !== true) {
-				jQuery.sap.log.warning("Illegal nullable: " + vNullable, null, oType.getName());
+				Log.warning("Illegal nullable: " + vNullable, null, oType.getName());
 			}
 			if (vPrecision === Math.floor(vPrecision) && vPrecision > 0 && vPrecision <= 12) {
 				oType.oConstraints = oType.oConstraints || {};
 				oType.oConstraints.precision = vPrecision;
 			} else if (vPrecision !== undefined && vPrecision !== 0) {
-				jQuery.sap.log.warning("Illegal precision: " + vPrecision, null, oType.getName());
+				Log.warning("Illegal precision: " + vPrecision, null, oType.getName());
 			}
 		}
 	}
@@ -303,5 +308,3 @@ sap.ui.define([
 
 	return TimeOfDay;
 });
-
-

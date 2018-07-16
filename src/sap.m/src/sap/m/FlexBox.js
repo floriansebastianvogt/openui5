@@ -4,22 +4,22 @@
 
 // Provides control sap.m.FlexBox.
 sap.ui.define([
-	'jquery.sap.global',
 	'./FlexBoxStylingHelper',
 	'./FlexItemData',
 	'./library',
 	'sap/ui/core/Control',
 	'sap/ui/core/RenderManager',
-	'./FlexBoxRenderer'
+	'./FlexBoxRenderer',
+	"sap/ui/thirdparty/jquery"
 ],
 function(
-	jQuery,
 	FlexBoxStylingHelper,
 	FlexItemData,
 	library,
 	Control,
 	RenderManager,
-	FlexBoxRenderer
+	FlexBoxRenderer,
+	jQueryDOM
 ) {
 	"use strict";
 
@@ -122,7 +122,7 @@ function(
 			justifyContent : {type : "sap.m.FlexJustifyContent", group : "Appearance", defaultValue : FlexJustifyContent.Start},
 
 			/**
-			 * Determines the layout behavior of items along the cross-axis. "Baseline" is not supported in Internet Explorer 10.
+			 * Determines the layout behavior of items along the cross-axis.
 			 *
 			 * @see http://www.w3.org/TR/css-flexbox-1/#align-items-property
 			 */
@@ -138,7 +138,7 @@ function(
 			wrap : {type : "sap.m.FlexWrap", group : "Appearance", defaultValue : FlexWrap.NoWrap},
 
 			/**
-			 * Determines the layout behavior of container lines when there's extra space along the cross-axis. This property has no effect in Internet Explorer 10.
+			 * Determines the layout behavior of container lines when there's extra space along the cross-axis.
 			 *
 			 * @see http://www.w3.org/TR/css-flexbox-1/#align-content-property
 			 *
@@ -291,9 +291,9 @@ function(
 			oWrapper = null;
 
 		if (oItem.getLayoutData()) {
-			oWrapper = jQuery.sap.byId(oItem.getLayoutData().getId());
+			oWrapper = jQueryDOM(document.getElementById(oItem.getLayoutData().getId()));
 		} else {
-			oWrapper = jQuery.sap.byId(RenderManager.createInvisiblePlaceholderId(oItem)).parent();
+			oWrapper = jQueryDOM(document.getElementById(RenderManager.createInvisiblePlaceholderId(oItem))).parent();
 		}
 
 		if (oControlEvent.getParameter("newValue")) {

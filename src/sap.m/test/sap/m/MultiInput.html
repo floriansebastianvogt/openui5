@@ -18,6 +18,9 @@
 		jQuery.sap.require("sap.m.MultiComboBox");
 		jQuery.sap.require("sap.m.Token");
 		jQuery.sap.require("sap.m.Table");
+		jQuery.sap.require("sap.ui.table.Table");
+		jQuery.sap.require("sap.ui.table.Row");
+		jQuery.sap.require("sap.ui.table.Column");
 
 		//*******************************
  		var oEventList = new sap.m.List();
@@ -1138,6 +1141,25 @@
 	   //******************************************
 		var app = new sap.m.App("myApp");
 
+		var oCondensedMultiInput = new sap.m.MultiInput("condensed-multiinput");
+		oCondensedMultiInput.setTokens([
+			new sap.m.Token({text: "Token 1", key: "0001"}),
+			new sap.m.Token({text: "Token 2", key: "0002"}),
+			new sap.m.Token({text: "Token 3", key: "0003"}),
+			]);
+		var oCondensedTable = new sap.ui.table.Table("condensed-table", {
+			minAutoRowCount: 2,
+			visibleRowCountMode: "Auto",
+			rows: "{/modelData}"
+		}).addStyleClass("sapUiMediumMarginBottom");
+		oCondensedTable.addColumn(new sap.ui.table.Column({
+			label: "Table with MultiInput (Condensed Mode)",
+			template: [
+				oCondensedMultiInput
+			]
+		}))
+		oCondensedTable.addStyleClass("sapUiSizeCondensed");
+
 		var page1 = new sap.m.Page("page1", {
 			title:"Mobile MultiInput Control",
 			content : [
@@ -1189,7 +1211,8 @@
 					new sap.m.Label({labelFor: multiInputWithSelectDialog.getId(), text : "MultiInput with SelectDialog", width: "100%"}),
 					multiInputWithSelectDialog,
 					new sap.m.Label({labelFor: multiInputWithDataBinding.getId(), text : "MultiInput with DataBinding", width: "100%"}),
-					multiInputWithDataBinding
+					multiInputWithDataBinding,
+					oCondensedTable
 			],
 			showNavButton: true,
 			navButtonPress: function(){ app.to("page2"); }

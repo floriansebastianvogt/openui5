@@ -4,7 +4,7 @@
 
 //Provides class sap.ui.model.odata.v4.ODataContextBinding
 sap.ui.define([
-	"jquery.sap.global",
+	"sap/ui/thirdparty/jquery",
 	"sap/ui/base/SyncPromise",
 	"sap/ui/model/Binding",
 	"sap/ui/model/ChangeReason",
@@ -20,9 +20,11 @@ sap.ui.define([
 
 	var sClassName = "sap.ui.model.odata.v4.ODataContextBinding",
 		mSupportedEvents = {
+			AggregatedDataStateChange : true,
 			change : true,
 			dataReceived : true,
-			dataRequested : true
+			dataRequested : true,
+			DataStateChange : true
 		};
 
 	/**
@@ -43,9 +45,9 @@ sap.ui.define([
 	 * @alias sap.ui.model.odata.v4.ODataContextBinding
 	 * @author SAP SE
 	 * @class Context binding for an OData V4 model.
-	 *   An event handler can only be attached to this binding for the following events: 'change',
-	 *   'dataReceived', and 'dataRequested'.
-	 *   For other events, an error is thrown.
+	 *   An event handler can only be attached to this binding for the following events:
+	 *   'AggregatedDataStateChange', 'change', 'dataReceived', 'dataRequested', and
+	 *   'DataStateChange'. For other events, an error is thrown.
 	 *
 	 *   A context binding can also be used as an <i>operation binding</i> to support bound actions,
 	 *   action imports, bound functions and function imports. If you want to control the execution
@@ -212,7 +214,7 @@ sap.ui.define([
 		 */
 		function fireChangeAndRefreshDependentBindings() {
 			that._fireChange({reason : ChangeReason.Change});
-			that.oModel.getDependentBindings(that).forEach(function (oDependentBinding) {
+			that.getDependentBindings().forEach(function (oDependentBinding) {
 				oDependentBinding.refreshInternal(oGroupLock.getGroupId(), true);
 			});
 		}
@@ -266,7 +268,7 @@ sap.ui.define([
 	/**
 	 * Applies the given map of parameters to this binding's parameters.
 	 *
-	 * @param {object} [mParameters]
+	 * @param {object} mParameters
 	 *   Map of binding parameters, {@link sap.ui.model.odata.v4.ODataModel#constructor}
 	 * @param {sap.ui.model.ChangeReason} [sChangeReason]
 	 *   A change reason, used to distinguish calls by {@link #constructor} from calls by
@@ -278,23 +280,12 @@ sap.ui.define([
 	 * @private
 	 */
 	ODataContextBinding.prototype.applyParameters = function (mParameters, sChangeReason) {
-		var oBindingParameters = this.oModel.buildBindingParameters(mParameters,
+		this.checkBindingParameters(mParameters,
 			["$$groupId", "$$inheritExpandSelect", "$$ownRequest", "$$updateGroupId"]);
 
-		if (oBindingParameters.$$inheritExpandSelect) {
-			if (!this.oOperation) {
-				throw new Error("Unsupported binding parameter $$inheritExpandSelect: "
-					+ "binding is not an operation binding");
-			}
-			if (oBindingParameters.$expand || oBindingParameters.$select) {
-				throw new Error("Must not set parameter $$inheritExpandSelect on binding which has "
-					+ "$expand or $select");
-			}
-		}
-
-		this.sGroupId = oBindingParameters.$$groupId;
-		this.sUpdateGroupId = oBindingParameters.$$updateGroupId;
-		this.bInheritExpandSelect = oBindingParameters.$$inheritExpandSelect;
+		this.sGroupId = mParameters.$$groupId;
+		this.sUpdateGroupId = mParameters.$$updateGroupId;
+		this.bInheritExpandSelect = mParameters.$$inheritExpandSelect;
 		this.mQueryOptions = this.oModel.buildQueryOptions(mParameters, true);
 		this.mParameters = mParameters; // store mParameters at binding after validation
 		if (!this.oOperation) {
@@ -309,15 +300,6 @@ sap.ui.define([
 			this.execute();
 		}
 	};
-
-	/**
-	 * The 'AggregatedDataStateChange' event is not supported by this binding.
-	 *
-	 * @event
-	 * @name sap.ui.model.odata.v4.ODataContextBinding#AggregatedDataStateChange
-	 * @public
-	 * @since 1.37.0
-	 */
 
 	/**
 	 * The 'change' event is fired when the binding is initialized or its parent context is changed.
@@ -381,15 +363,6 @@ sap.ui.define([
 	 *
 	 * @event
 	 * @name sap.ui.model.odata.v4.ODataContextBinding#dataRequested
-	 * @public
-	 * @since 1.37.0
-	 */
-
-	/**
-	 * The 'DataStateChange' event is not supported by this binding.
-	 *
-	 * @event
-	 * @name sap.ui.model.odata.v4.ODataContextBinding#DataStateChange
 	 * @public
 	 * @since 1.37.0
 	 */
@@ -542,8 +515,8 @@ sap.ui.define([
 	 * @param {string} [sGroupId]
 	 *   The group ID to be used for the request; if not specified, the group ID for this binding is
 	 *   used, see {@link sap.ui.model.odata.v4.ODataContextBinding#constructor}.
-	 *   Valid values are <code>undefined</code>, '$auto', '$direct' or application group IDs as
-	 *   specified in {@link sap.ui.model.odata.v4.ODataModel#submitBatch}.
+	 *   Valid values are <code>undefined</code>, '$auto', '$auto.*', '$direct' or application group
+	 *   IDs as specified in {@link sap.ui.model.odata.v4.ODataModel}.
 	 * @returns {Promise}
 	 *   A promise that is resolved without data or a return value context when the operation
 	 *   call succeeded, or rejected with an instance of <code>Error</code> in case of failure,
@@ -682,9 +655,9 @@ sap.ui.define([
 	 * @private
 	 */
 	ODataContextBinding.prototype.getResolvedPath = function () {
-		var aSegments,
-			sPath = "",
+		var sPath = "",
 			sResolvedPath = this.oModel.resolve(this.sPath, this.oContext),
+			aSegments,
 			that = this;
 
 		if (sResolvedPath && sResolvedPath.includes("/-1")) {
@@ -774,7 +747,7 @@ sap.ui.define([
 					// Do not fire a change event, or else ManagedObject destroys and recreates the
 					// binding hierarchy causing a flood of events
 				}
-				that.oModel.getDependentBindings(that).forEach(function (oDependentBinding) {
+				that.getDependentBindings().forEach(function (oDependentBinding) {
 					oDependentBinding.refreshInternal(sGroupId, bCheckUpdate);
 				});
 			} else {
@@ -799,7 +772,7 @@ sap.ui.define([
 			this.bAggregatedQueryOptionsInitial = true;
 			this.mCacheByContext = undefined;
 			this.fetchCache(this.oContext);
-			this.oModel.getDependentBindings(this).forEach(function (oDependentBinding) {
+			this.getDependentBindings().forEach(function (oDependentBinding) {
 				oDependentBinding.resumeInternal(bCheckUpdate);
 			});
 			this._fireChange({reason : ChangeReason.Change});

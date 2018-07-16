@@ -11,8 +11,46 @@
  */
 
 // Provides class sap.ui.model.odata.ODataModel
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Context', 'sap/ui/model/Model', './ODataUtils', './CountMode', './ODataContextBinding', './ODataListBinding', './ODataMetadata', './ODataPropertyBinding', './ODataTreeBinding', 'sap/ui/model/odata/ODataMetaModel', 'sap/ui/thirdparty/URI', 'sap/ui/thirdparty/datajs'],
-	function(jQuery, BindingMode, Context, Model, ODataUtils, CountMode, ODataContextBinding, ODataListBinding, ODataMetadata, ODataPropertyBinding, ODataTreeBinding, ODataMetaModel, URI, OData) {
+sap.ui.define([
+	'sap/ui/model/BindingMode',
+	'sap/ui/model/Context',
+	'sap/ui/model/Model',
+	'./ODataUtils',
+	'./CountMode',
+	'./ODataContextBinding',
+	'./ODataListBinding',
+	'./ODataMetadata',
+	'./ODataPropertyBinding',
+	'./ODataTreeBinding',
+	'sap/ui/model/FilterProcessor',
+	'sap/ui/model/odata/ODataMetaModel',
+	'sap/ui/thirdparty/URI',
+	'sap/ui/thirdparty/datajs',
+	"sap/base/util/uid",
+	"sap/base/util/merge",
+	"sap/base/Log",
+	"sap/base/assert"
+],
+	function(
+		BindingMode,
+		Context,
+		Model,
+		ODataUtils,
+		CountMode,
+		ODataContextBinding,
+		ODataListBinding,
+		ODataMetadata,
+		ODataPropertyBinding,
+		ODataTreeBinding,
+		FilterProcessor,
+		ODataMetaModel,
+		URI,
+		OData,
+		uid,
+		merge,
+		Log,
+		assert
+	) {
 	"use strict";
 
 
@@ -327,11 +365,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		this.bUseBatch = this.bUseBatch || this.oMetadata.getUseBatch();
 		var doFire = function(bDelay){
 			if (!!bDelay) {
-				that.metadataLoadEvent = jQuery.sap.delayedCall(0, that, doFire);
+				that.metadataLoadEvent = setTimeout(doFire.bind(that), 0);
 			} else {
 				if (that.oMetadata) {
 					that.fireMetadataLoaded({metadata: that.oMetadata});
-					jQuery.sap.log.debug("ODataModel fired metadataloaded");
+					Log.debug("ODataModel fired metadataloaded");
 				}
 			}
 		};
@@ -424,7 +462,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		} else {
 			this.fireEvent("annotationsFailed", mArguments);
 		}
-		jQuery.sap.log.debug("ODataModel fired annotationsfailed");
+		Log.debug("ODataModel fired annotationsfailed");
 		return this;
 	};
 
@@ -679,7 +717,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 
 			// no data available
 			if (!oResultData) {
-				jQuery.sap.log.fatal("The following problem occurred: No data was retrieved by service: " + oResponse.requestUri);
+				Log.fatal("The following problem occurred: No data was retrieved by service: " + oResponse.requestUri);
 				that.fireRequestCompleted({url : oRequest.requestUri, type : "GET", async : oRequest.async,
 					info: "Accept headers:" + that.oHeaders["Accept"], infoObject : {acceptHeaders: that.oHeaders["Accept"]},  success: false});
 				return false;
@@ -697,7 +735,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 				if (oResultData.__batchResponses && oResultData.__batchResponses.length > 0) {
 					oResultData = oResultData.__batchResponses[0].data;
 				} else {
-					jQuery.sap.log.fatal("The following problem occurred: No data was retrieved by service: " + oResponse.requestUri);
+					Log.fatal("The following problem occurred: No data was retrieved by service: " + oResponse.requestUri);
 				}
 			}
 
@@ -710,7 +748,20 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 				_submit(oRequest);
 			} else {
 				// all data is read so merge all data
-				jQuery.sap.extend(oResultData.results, aResults);
+				if (oResultData.results) {
+					var vValue, vKey;
+					for (vKey in aResults) {
+						vValue = aResults[vKey];
+
+						// Prevent never-ending loop
+						if (aResults === vValue) {
+							continue;
+						}
+
+						oResultData.results[vKey] = vValue;
+					}
+				}
+
 				// broken implementations need this
 				if (oResultData.results && !Array.isArray(oResultData.results)) {
 					oResultData = oResultData.results;
@@ -889,7 +940,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			jQuery.each(oData, function(sPropName, oCurrentEntry) {
 				if (oCurrentEntry && oCurrentEntry["__ref"]) {
 					var oChildEntry = that._getObject("/" + oCurrentEntry["__ref"]);
-					jQuery.sap.assert(oChildEntry, "ODataModel inconsistent: " + oCurrentEntry["__ref"] + " not found!");
+					assert(oChildEntry, "ODataModel inconsistent: " + oCurrentEntry["__ref"] + " not found!");
 					if (oChildEntry) {
 						delete oCurrentEntry["__ref"];
 						oData[sPropName] = oChildEntry;
@@ -899,7 +950,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 				} else if (oCurrentEntry && oCurrentEntry["__list"]) {
 					jQuery.each(oCurrentEntry["__list"], function(j, sEntry) {
 						var oChildEntry = that._getObject("/" + oCurrentEntry["__list"][j]);
-						jQuery.sap.assert(oChildEntry, "ODataModel inconsistent: " +  oCurrentEntry["__list"][j] + " not found!");
+						assert(oChildEntry, "ODataModel inconsistent: " +  oCurrentEntry["__list"][j] + " not found!");
 						if (oChildEntry) {
 							aResults.push(oChildEntry);
 							// check recursively for found child entries
@@ -976,14 +1027,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 	ODataModel.prototype.checkUpdate = function(bForceUpdate, bAsync, mChangedEntities, bMetaModelOnly) {
 		if (bAsync) {
 			if (!this.sUpdateTimer) {
-				this.sUpdateTimer = jQuery.sap.delayedCall(0, this, function() {
+				this.sUpdateTimer = setTimeout(function() {
 					this.checkUpdate(bForceUpdate, false, mChangedEntities);
-				});
+				}.bind(this), 0);
 			}
 			return;
 		}
 		if (this.sUpdateTimer) {
-			jQuery.sap.clearDelayedCall(this.sUpdateTimer);
+			clearTimeout(this.sUpdateTimer);
 			this.sUpdateTimer = null;
 		}
 		var aBindings = this.aBindings.slice(0);
@@ -1082,7 +1133,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		}
 
 		if (fnCallBack) {
-			var bIsRelative = !jQuery.sap.startsWith(sPath, "/");
+			var bIsRelative = !sPath.startsWith("/");
 			if (sFullPath) {
 				var aParams = [],
 					sCustomParams = this.createCustomParams(mParameters);
@@ -1255,7 +1306,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 				mCustomQueryOptions = mParameters[sName];
 				for (var sName in mCustomQueryOptions) {
 					if (sName.indexOf("$") == 0) {
-						jQuery.sap.log.warning("Trying to set OData parameter " + sName + " as custom query option!");
+						Log.warning("Trying to set OData parameter " + sName + " as custom query option!");
 					} else {
 						aCustomParams.push(sName + "=" + jQuery.sap.encodeURL(mCustomQueryOptions[sName]));
 					}
@@ -1380,11 +1431,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			sName,
 			sValue,
 			oProperty;
-		jQuery.sap.assert(oEntityType, "Could not find entity type of collection \"" + sCollection + "\" in service metadata!");
+		assert(oEntityType, "Could not find entity type of collection \"" + sCollection + "\" in service metadata!");
 		sKey += "(";
 		if (oEntityType.key.propertyRef.length == 1) {
 			sName = oEntityType.key.propertyRef[0].name;
-			jQuery.sap.assert(sName in oKeyProperties, "Key property \"" + sName + "\" is missing in object!");
+			assert(sName in oKeyProperties, "Key property \"" + sName + "\" is missing in object!");
 			oProperty = this.oMetadata._getPropertyMetadata(oEntityType, sName);
 			sValue = ODataUtils.formatValue(oKeyProperties[sName], oProperty.type);
 			sKey += bDecode ? sValue : encodeURIComponent(sValue);
@@ -1394,7 +1445,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 					sKey += ",";
 				}
 				sName = oPropertyRef.name;
-				jQuery.sap.assert(sName in oKeyProperties, "Key property \"" + sName + "\" is missing in object!");
+				assert(sName in oKeyProperties, "Key property \"" + sName + "\" is missing in object!");
 				oProperty = that.oMetadata._getPropertyMetadata(oEntityType, sName);
 				sValue = ODataUtils.formatValue(oKeyProperties[sName], oProperty.type);
 				sKey += sName;
@@ -1438,7 +1489,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		}
 
 		// do a value copy or the changes to that value will be modified in the model as well (reference)
-		oValue = jQuery.sap.extend(true, {}, oValue);
+		oValue = merge({}, oValue);
 
 		if (bIncludeExpandEntries == true) {
 			// include expand entries
@@ -1790,7 +1841,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 								if (aChangeRequests[j].method == "MERGE" || aChangeRequests[j].method == "PUT") {
 									//try to get the object to the uri from the model
 									sUrl = aChangeRequests[j].requestUri.replace(this.sServiceUrl + '/','');
-									if (!jQuery.sap.startsWith(sUrl , "/")) {
+									if (!sUrl.startsWith("/")) {
 										sUrl = "/" + sUrl;
 									}
 									oEntry = this._getObject(sUrl);
@@ -1802,16 +1853,16 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 							}
 						}
 					} else {
-						jQuery.sap.log.warning("could not update ETags for batch request: corresponding response for request missing");
+						Log.warning("could not update ETags for batch request: corresponding response for request missing");
 					}
 				}
 			} else {
-				jQuery.sap.log.warning("could not update ETags for batch request: no batch responses/requests available");
+				Log.warning("could not update ETags for batch request: no batch responses/requests available");
 			}
 		} else {
 			// refresh ETag from response directly. We can not wait for the refresh.
 			sUrl = oRequest.requestUri.replace(this.sServiceUrl + '/','');
-			if (!jQuery.sap.startsWith(sUrl , "/")) {
+			if (!sUrl.startsWith("/")) {
 				sUrl = "/" + sUrl;
 			}
 			oEntry = this._getObject(sUrl);
@@ -1846,7 +1897,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 					oOperationResponse.response.body;
 				}
 				aErrorResponses.push(oOperationResponse);
-				jQuery.sap.log.fatal(sErrorMsg);
+				Log.fatal(sErrorMsg);
 			}
 			if (oOperationResponse.__changeResponses) {
 				jQuery.each(oOperationResponse.__changeResponses, function(iIndex, oChangeOperationResponse) {
@@ -1858,7 +1909,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 							oChangeOperationResponse.response.body;
 						}
 						aErrorResponses.push(oChangeOperationResponse);
-						jQuery.sap.log.fatal(sErrorMsg);
+						Log.fatal(sErrorMsg);
 					}
 				});
 			}
@@ -1891,7 +1942,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			mParameters.statusText = oError.response.statusText;
 			mParameters.responseText = oError.response.body;
 		}
-		jQuery.sap.log.fatal(sErrorMsg);
+		Log.fatal(sErrorMsg);
 
 		return mParameters;
 	};
@@ -2315,7 +2366,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 
 
 		oFunctionMetadata = this.oMetadata._getFunctionImportMetadata(sFunctionName, sMethod);
-		jQuery.sap.assert(oFunctionMetadata, "Function " + sFunctionName + " not found in the metadata !");
+		assert(oFunctionMetadata, "Function " + sFunctionName + " not found in the metadata !");
 
 		if (oFunctionMetadata) {
 			sUrl = this._createRequestUrl(sFunctionName, oContext, null,  this.bUseBatch);
@@ -2329,7 +2380,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 						var matchingParameter = matchingParameters[0];
 						oUrlParams[sParameterName] = ODataUtils.formatValue(oParameterValue, matchingParameter.type);
 					} else {
-						jQuery.sap.log.warning("Parameter " + sParameterName + " is not defined for function call " + sFunctionName + "!");
+						Log.warning("Parameter " + sParameterName + " is not defined for function call " + sFunctionName + "!");
 					}
 				});
 			}
@@ -2383,7 +2434,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		var oRequest, sUrl, oRequestHandle, oBatchRequest,
 			oContext, mUrlParams, bAsync, fnSuccess, fnError,
 			aFilters, aSorters, sFilterParams, sSorterParams,
-			oEntityType, sResolvedPath,
+			oFilter, oEntityType, sResolvedPath,
 			aUrlParams;
 
 		if (mParameters && typeof (mParameters) == "object" && !(mParameters instanceof Context)) {
@@ -2414,11 +2465,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		if (sSorterParams) { aUrlParams.push(sSorterParams); }
 
 		if (aFilters && !this.oMetadata) {
-			jQuery.sap.log.fatal("Tried to use filters in read method before metadata is available.");
+			Log.fatal("Tried to use filters in read method before metadata is available.");
 		} else {
 			sResolvedPath = this._normalizePath(sPath, oContext);
 			oEntityType = this.oMetadata && this.oMetadata._getEntityTypeByPath(sResolvedPath);
-			sFilterParams = ODataUtils.createFilterParams(aFilters, this.oMetadata, oEntityType);
+			oFilter = FilterProcessor.groupFilters(aFilters);
+			sFilterParams = ODataUtils.createFilterParams(oFilter, this.oMetadata, oEntityType);
 			if (sFilterParams) { aUrlParams.push(sFilterParams); }
 		}
 
@@ -2452,7 +2504,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		jQuery.extend(oChangeHeader, this.mCustomHeaders, this.oHeaders);
 
 		// for batch remove starting / if any
-		if (jQuery.sap.startsWith(sPath, "/")) {
+		if (sPath.startsWith("/")) {
 			sPath = sPath.substr(1);
 		}
 
@@ -2522,13 +2574,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 	 */
 	ODataModel.prototype.addBatchReadOperations = function(aReadOperations) {
 		if (!Array.isArray(aReadOperations) || aReadOperations.length <= 0) {
-			jQuery.sap.log.warning("No array with batch operations provided!");
+			Log.warning("No array with batch operations provided!");
 			return false;
 		}
 		var that = this;
 		jQuery.each(aReadOperations, function(iIndex, oReadOperation) {
 			if (oReadOperation.method != "GET") {
-				jQuery.sap.log.warning("Batch operation should be a GET operation!");
+				Log.warning("Batch operation should be a GET operation!");
 				return false;
 			}
 			that.aBatchOperations.push(oReadOperation);
@@ -2550,7 +2602,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		}
 		jQuery.each(aChangeOperations, function(iIndex, oChangeOperation) {
 			if (oChangeOperation.method != "POST" && oChangeOperation.method != "PUT" && oChangeOperation.method != "MERGE" && oChangeOperation.method != "DELETE") {
-				jQuery.sap.log.warning("Batch operation should be a POST/PUT/MERGE/DELETE operation!");
+				Log.warning("Batch operation should be a POST/PUT/MERGE/DELETE operation!");
 				return false;
 			}
 		});
@@ -2607,7 +2659,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		bAsync = bAsync !== false;
 
 		if (this.aBatchOperations.length <= 0) {
-			jQuery.sap.log.warning("No batch operations in batch. No request will be triggered!");
+			Log.warning("No batch operations in batch. No request will be triggered!");
 			return false;
 		}
 		oRequest = this._createBatchRequest(this.aBatchOperations, bAsync);
@@ -2671,7 +2723,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 
 			if (jQuery.isPlainObject(oStoredEntry)) {
 				// do a copy of the payload or the changes will be deleted in the model as well (reference)
-				oPayload = jQuery.sap.extend(true, {}, oStoredEntry);
+				oPayload = merge({}, oStoredEntry);
 				// remove metadata, navigation properties to reduce payload
 				if (oPayload.__metadata) {
 					sType = oPayload.__metadata.type;
@@ -2733,7 +2785,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			var aChangeRequests = [];
 			jQuery.each(this.oRequestQueue, function(sKey, oCurrentRequest){
 				delete oCurrentRequest._oRef;
-				var oReqClone = jQuery.sap.extend(true, {}, oCurrentRequest);
+				var oReqClone = merge({}, oCurrentRequest);
 				oCurrentRequest._oRef = oReqClone;
 
 				oReqClone.requestUri = oReqClone.requestUri.replace(that.sServiceUrl + '/','');
@@ -2750,7 +2802,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 				// We send the cloned request which will be modified by datajs but we want to keep the original request stored
 				// because it may fail and we need to send the request again.
 				delete oCurrentRequest._oRef;
-				var oReqClone = jQuery.sap.extend(true, {}, oCurrentRequest);
+				var oReqClone = merge({}, oCurrentRequest);
 				oCurrentRequest._oRef = oReqClone;
 				//remove create flag
 				 if (oReqClone.data && oReqClone.data._bCreate) {
@@ -2956,7 +3008,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			jQuery.each(mHeaders, function(sHeaderName, sHeaderValue){
 				// case sensitive check needed to make sure private headers cannot be overridden by difference in the upper/lower case (e.g. accept and Accept).
 				if (that._isHeaderPrivate(sHeaderName)) {
-					jQuery.sap.log.warning("Not allowed to modify private header: " + sHeaderName);
+					Log.warning("Not allowed to modify private header: " + sHeaderName);
 				} else {
 					mCheckedHeaders[sHeaderName] = sHeaderValue;
 				}
@@ -3064,7 +3116,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			var sPath = oContext.getPath();
 			delete this.mContexts[sPath]; // contexts are stored starting with /
 			// remove starting / if any
-			if (jQuery.sap.startsWith(sPath, "/")) {
+			if (sPath.startsWith("/")) {
 				sPath = sPath.substr(1);
 			}
 			delete this.oRequestQueue[sPath];
@@ -3107,12 +3159,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			sUrl,
 			oRequest;
 
-		if (!jQuery.sap.startsWith(sPath, "/")) {
+		if (!sPath.startsWith("/")) {
 			sPath = "/" + sPath;
 		}
 		var oEntityMetadata = this.oMetadata._getEntityTypeByPath(sPath);
 		if (!oEntityMetadata) {
-			jQuery.sap.assert(oEntityMetadata, "No Metadata for collection " + sPath + " found");
+			assert(oEntityMetadata, "No Metadata for collection " + sPath + " found");
 			return undefined;
 		}
 		if (typeof vProperties === "object" && !Array.isArray(vProperties)) {
@@ -3130,14 +3182,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 				}
 			}
 			if (vProperties) {
-				jQuery.sap.assert(vProperties.length === 0, "No metadata for the following properties found: " + vProperties.join(","));
+				assert(vProperties.length === 0, "No metadata for the following properties found: " + vProperties.join(","));
 			}
 		}
 		//mark as entity for create; we need this for setProperty
 		oEntity._bCreate = true;
 
 		// remove starting / for key only
-		sKey = sPath.substring(1) + "('" + jQuery.sap.uid() + "')";
+		sKey = sPath.substring(1) + "('" + uid() + "')";
 
 		this.oData[sKey] = oEntity;
 
@@ -3168,7 +3220,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 		if (sNamespace.toUpperCase() !== 'EDM') {
 			var oComplexType = {};
 			var oComplexTypeMetadata = this.oMetadata._getObjectMetadata("complexType",sTypeName,sNamespace);
-			jQuery.sap.assert(oComplexTypeMetadata, "Complex type " + sType + " not found in the metadata !");
+			assert(oComplexTypeMetadata, "Complex type " + sType + " not found in the metadata !");
 			for (var i = 0; i < oComplexTypeMetadata.property.length; i++) {
 				var oPropertyMetadata = oComplexTypeMetadata.property[i];
 				oComplexType[oPropertyMetadata.name] = this._createPropertyValue(oPropertyMetadata.type);
@@ -3199,10 +3251,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			sPath = sPath.substr(0, sPath.indexOf('?'));
 		}
 
-		if (!oContext && !jQuery.sap.startsWith(sPath,"/")) {
+		if (!oContext && !sPath.startsWith("/")) {
 			// we need to add a / due to compatibility reasons; but only if there is no context
 			sPath = '/' + sPath;
-			jQuery.sap.log.warning(this + " path " + sPath + " should be absolute if no Context is set");
+			Log.warning(this + " path " + sPath + " should be absolute if no Context is set");
 		}
 		return this.resolve(sPath, oContext);
 	};
@@ -3300,10 +3352,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/BindingMode', 'sap/ui/model/Co
 			delete this.aPendingRequestHandles;
 		}
 		if (!!this.oMetadataLoadEvent) {
-			jQuery.sap.clearDelayedCall(this.oMetadataLoadEvent);
+			clearTimeout(this.oMetadataLoadEvent);
 		}
 		if (!!this.oMetadataFailedEvent) {
-			jQuery.sap.clearDelayedCall(this.oMetadataFailedEvent);
+			clearTimeout(this.oMetadataFailedEvent);
 		}
 
 		if (this.oMetadata) {

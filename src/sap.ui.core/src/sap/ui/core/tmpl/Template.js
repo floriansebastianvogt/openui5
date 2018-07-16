@@ -3,8 +3,29 @@
  */
 
 // Provides base class sap.ui.core.tmpl.Template for all templates
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/BindingParser', 'sap/ui/core/Control', 'sap/ui/core/RenderManager', 'jquery.sap.sjax'],
-	function(jQuery, ManagedObject, BindingParser, Control, RenderManager /*, jQuerySap1 */) {
+sap.ui.define([
+	'jquery.sap.global',
+	'sap/ui/base/ManagedObject',
+	'sap/ui/base/BindingParser',
+	'sap/ui/core/Control',
+	'sap/ui/core/RenderManager',
+	'sap/base/util/ObjectPath',
+	"sap/ui/thirdparty/jquery",
+	"sap/base/Log",
+	"sap/base/assert",
+	'jquery.sap.sjax'
+],
+	function(
+		jQuery,
+		ManagedObject,
+		BindingParser,
+		Control,
+		RenderManager,
+		ObjectPath,
+		jQueryDOM,
+		Log,
+		assert
+	) {
 	"use strict";
 
 
@@ -75,7 +96,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 
 		if ( oOldTemplate && this !== oOldTemplate ) {
 			sMsg = "adding template with duplicate id '" + sId + "'";
-			jQuery.sap.log.error(sMsg);
+			Log.error(sMsg);
 			throw new Error("Error: " + sMsg);
 		}
 
@@ -209,7 +230,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 	 */
 	Template.prototype.declareControl = function(sControl) {
 
-		jQuery.sap.assert(!!sControl, "A fully qualified name must be specified!");
+		assert(!!sControl, "A fully qualified name must be specified!");
 
 		if (sControl) {
 
@@ -239,7 +260,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 			});
 
 			// returns the constructor function
-			return jQuery.sap.getObject(sControl);
+			return ObjectPath.get(sControl || "");
 
 		}
 
@@ -300,7 +321,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 		if (!(oRef instanceof Control) && bInline) {
 
 			// lookup the DOM element in which to place the template
-			var $this = typeof oRef === "string" ? jQuery.sap.byId(oRef) : jQuery(oRef);
+			var $this = typeof oRef === "string" ? jQueryDOM(document.getElementById(oRef)) : jQuery(oRef);
 
 			// the DOM element must exist
 			if ($this.length > 0) {
@@ -343,7 +364,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 	 * @abstract
 	 */
 	Template.prototype.createMetadata = function() {
-		jQuery.sap.log.error("The function createMetadata is an abstract function which needs to be implemented by subclasses.");
+		Log.error("The function createMetadata is an abstract function which needs to be implemented by subclasses.");
 	};
 
 
@@ -355,7 +376,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 	 * @abstract
 	 */
 	Template.prototype.createRenderer = function() {
-		jQuery.sap.log.error("The function createRenderer is an abstract function which needs to be implemented by subclasses.");
+		Log.error("The function createRenderer is an abstract function which needs to be implemented by subclasses.");
 	};
 
 
@@ -507,7 +528,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 			} else {
 
 				// retrieve the required properties
-				var oElement = oTemplate.domref || jQuery.sap.domById(oTemplate.id),
+				var oElement = oTemplate.domref || ((oTemplate.id ? window.document.getElementById(oTemplate.id) : null)),
 					$element = jQuery(oElement);
 
 				bInline = false;
@@ -560,8 +581,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject', 'sap/ui/base/Bi
 			}
 
 			// require and instantiate the proper template
+			//TODO: global jquery call found
 			jQuery.sap.require(sClass);
-			var oClass = jQuery.sap.getObject(sClass);
+			var oClass = ObjectPath.get(sClass || "");
 
 			// create a new instance of the template
 			var oInstance = new oClass({

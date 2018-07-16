@@ -5,8 +5,12 @@
 /**
  * Contains functionality that is used in sap.m.IconTabBar Drag&Drop
  */
-sap.ui.define([],
-	function() {
+sap.ui.define([
+	'sap/ui/core/dnd/DragInfo',
+	'sap/ui/core/dnd/DropInfo',
+	"sap/ui/events/KeyCodes"
+],
+	function(DragInfo, DropInfo, KeyCodes) {
 		"use strict";
 
 		var INSERT_POSITION_BEFORE = "Before",
@@ -143,7 +147,7 @@ sap.ui.define([],
 					bRtl = sap.ui.getCore().getConfiguration().getRTL(),
 					iNewDropIndex,
 					$DroppedControl,
-					oKeyCodes = jQuery.sap.KeyCodes;
+					oKeyCodes = KeyCodes;
 
 				switch (iKeyCode) {
 					//Handles Ctrl + Home
@@ -230,12 +234,11 @@ sap.ui.define([],
 			/**
 			 * Adding aggregations for  drag and drop.
 			 * @param {object} context from which context function is called (sap.m.IconTabHeader or sap.m.IconTabSelectList)
-			 * @param {object} DragInfo
-			 * @param {object} DropInfo
 			 * @param {string} sDropLayout Depending on the control we are dragging in, it could be Vertical or Horizontal
 			 */
-			setDragDropAggregations: function (context, DragInfo, DropInfo, sDropLayout) {
-				var sIconTabHeaderId = context._iconTabHeader ? context._iconTabHeader.getId() : context.getId();
+			setDragDropAggregations: function (context, sDropLayout) {
+				var oIconTabHeader = context._iconTabHeader ? context._iconTabHeader : context;
+				var sIconTabHeaderId = oIconTabHeader.getId();
 				//Adding Drag&Drop configuration to the dragDropConfig aggregation if needed
 				context.addDragDropConfig(new DragInfo({
 					sourceAggregation: "items",

@@ -3,8 +3,26 @@
  */
 
 // Provides class sap.ui.core.ComponentSupport
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', 'sap/ui/core/Component', 'sap/ui/core/ComponentContainer', 'sap/ui/core/library', 'jquery.sap.script', 'jquery.sap.strings'],
-	function(jQuery, DataType, Component, ComponentContainer, library /*, jQuerySapScript, jQuerySapStrings */) {
+sap.ui.define([
+	'sap/ui/base/DataType',
+	'sap/ui/core/Component',
+	'sap/ui/core/ComponentContainer',
+	'sap/ui/core/library',
+	"sap/base/Log",
+	"sap/base/util/ObjectPath",
+	"sap/base/strings/camelize",
+	"sap/base/util/UriParameters"
+],
+	function(
+		DataType,
+		Component,
+		ComponentContainer,
+		library,
+		Log,
+		ObjectPath,
+		camelize,
+		UriParameters
+	) {
 	"use strict";
 
 	var ComponentLifecycle = library.ComponentLifecycle;
@@ -36,10 +54,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', 'sap/ui/core/Compone
 	ComponentSupport.run = function() {
 		var aElements = ComponentSupport._find();
 		for (var i = 0, l = aElements.length; i < l; i++) {
-			jQuery.sap.log.debug("ComponentSupport found and parses element: " + aElements[i]);
+			Log.debug("ComponentSupport found and parses element: " + aElements[i]);
 			var mSettings = ComponentSupport._parse(aElements[i]);
 			ComponentSupport._applyDefaultSettings(mSettings);
-			jQuery.sap.log.debug("ComponentSupport creates ComponentContainer with the following settings:\n" + JSON.stringify(mSettings, 0, 2));
+			Log.debug("ComponentSupport creates ComponentContainer with the following settings:\n" + JSON.stringify(mSettings, 0, 2));
 			new ComponentContainer(mSettings).placeAt(aElements[i]);
 		}
 	};
@@ -75,7 +93,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', 'sap/ui/core/Compone
 			// parse every data- property besides data-sap-ui-component
 			var oParsedAttributeName = /^data-((?!sap-ui-component).+)/g.exec(oAttribute.name);
 			if (oParsedAttributeName) {
-				var sKey = jQuery.sap.camelCase(oParsedAttributeName[1]);
+				var sKey = camelize(oParsedAttributeName[1]);
 				var oValue = oAttribute.value;
 				// special handling for id property
 				if (sKey !== "id") {
@@ -91,7 +109,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', 'sap/ui/core/Compone
 						}
 						oValue = oType.parseValue(oValue);
 					} else if (oEvent) {
-						var fnCallback = jQuery.sap.getObject(oValue);
+						var fnCallback = ObjectPath.get(oValue);
 						if (typeof fnCallback !== "function") {
 							throw new Error("Callback handler for event \"" + oEvent.name + "\" not found");
 						}
@@ -130,12 +148,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/DataType', 'sap/ui/core/Compone
 	};
 
 	// get the URI parameters
-	var oUriParams = jQuery.sap.getUriParameters();
+	var oUriParams = new UriParameters(window.location.href);
 	var sAutorun = oUriParams.get("sap-ui-xx-componentsupport-autorun");
 	if (!sAutorun || sAutorun.toLowerCase() !== "false") {
 		ComponentSupport.run();
 	} else {
-		jQuery.sap.log.info("ComponentSupport autorun has been interrupted by URL parameter.");
+		Log.info("ComponentSupport autorun has been interrupted by URL parameter.");
 	}
 
 	return ComponentSupport;

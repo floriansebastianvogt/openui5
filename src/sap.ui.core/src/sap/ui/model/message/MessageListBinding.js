@@ -3,8 +3,14 @@
  */
 
 // Provides the JSON model implementation of a list binding
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/ClientListBinding'],
-	function(jQuery, ChangeReason, ClientListBinding) {
+sap.ui.define([
+	'sap/ui/model/ChangeReason',
+	'sap/ui/model/ClientListBinding',
+	"sap/base/strings/hash",
+	"sap/base/util/array/diff",
+	"sap/base/util/deepEqual"
+],
+	function(ChangeReason, ClientListBinding, hash, diff, deepEqual) {
 	"use strict";
 
 
@@ -56,11 +62,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 			//Check diff
 			if (this.aLastContexts && iStartIndex < this.iLastEndIndex) {
 				var that = this;
-				aContexts.diff = jQuery.sap.arraySymbolDiff(this.aLastContextData, aContexts, function (vContext){
+				aContexts.diff = diff(this.aLastContextData, aContexts, function (vContext){
 					if (typeof vContext !== "string") {
 						return that.getContextData(vContext); // objects require JSON string representation
 					}
-					return jQuery.sap.hashCode(vContext); // string use hash codes
+					return hash(vContext); // string use hash codes
 				});
 			}
 			this.iLastEndIndex = iStartIndex + iLength;
@@ -79,7 +85,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 	 *
 	 * @private
 	 * @param {sap.ui.model.Context} oContext object which is used for serialization.
-	 * @returns string representation of the context's object.
+	 * @returns {string} string representation of the context's object.
 	 */
 	MessageListBinding.prototype.getEntryData = function(oContext) {
 		var oObject = oContext.getObject();
@@ -130,7 +136,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 
 		if (!this.bUseExtendedChangeDetection) {
 			var oList = this.oModel._getObject(this.sPath, this.oContext);
-			if (!jQuery.sap.equal(this.oList, oList) || bForceupdate) {
+			if (!deepEqual(this.oList, oList) || bForceupdate) {
 				this.update();
 				this._fireChange({reason: ChangeReason.Change});
 			}
@@ -140,7 +146,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 
 			//If the list has changed we need to update the indices first.
 			var oList = this.oModel._getObject(this.sPath, this.oContext);
-			if (!jQuery.sap.equal(this.oList, oList)) {
+			if (!deepEqual(this.oList, oList)) {
 				this.update();
 			}
 

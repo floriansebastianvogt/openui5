@@ -2,13 +2,26 @@
  * ${copyright}
  */
 sap.ui.require([
-	"jquery.sap.global",
-	"sap/ui/base/BindingParser",
-	"sap/ui/base/ExpressionParser",
-	"sap/ui/core/Icon",
-	"sap/ui/model/json/JSONModel",
-	"sap/ui/model/odata/ODataUtils"
-], function (jQuery, BindingParser, ExpressionParser, Icon, JSONModel, ODataUtils) {
+    "jquery.sap.global",
+    "sap/ui/base/BindingParser",
+    "sap/ui/base/ExpressionParser",
+    "sap/ui/core/Icon",
+    "sap/ui/model/json/JSONModel",
+    "sap/ui/model/odata/ODataUtils",
+    "sap/base/util/JSTokenizer",
+    "sap/base/Log",
+    "sap/ui/performance/Measurement"
+], function(
+    jQuery,
+	BindingParser,
+	ExpressionParser,
+	Icon,
+	JSONModel,
+	ODataUtils,
+	JSTokenizer,
+	Log,
+	Measurement
+) {
 	/*global QUnit, sinon */
 	/*eslint no-warning-comments: 0 */
 	"use strict";
@@ -80,7 +93,7 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.module("sap.ui.base.ExpressionParser", {
 		beforeEach : function () {
-			this.oLogMock = this.mock(jQuery.sap.log);
+			this.oLogMock = this.mock(Log);
 			this.oLogMock.expects("warning").never();
 			this.oLogMock.expects("error").never();
 		},
@@ -621,7 +634,7 @@ sap.ui.require([
 		QUnit.test("saveBindingAsPart: primitive value " + vPrimitiveValue, function (assert) {
 			var sBinding = "{:= ${foo : '~primitive~'} }";
 
-			this.mock(jQuery.sap).expects("parseJS")
+			this.mock(JSTokenizer).expects("parseJS")
 				.once() // this would be violated by bad code
 				.withExactArgs(sBinding, 5)
 				.returns({
@@ -637,10 +650,10 @@ sap.ui.require([
 
 	//*********************************************************************************************
 	QUnit.test("parse: Performance measurement points", function (assert) {
-		var oAverageSpy = this.spy(jQuery.sap.measure, "average")
+		var oAverageSpy = this.spy(Measurement, "average")
 				.withArgs("sap.ui.base.ExpressionParser#parse", "",
 					["sap.ui.base.ExpressionParser"]),
-			oEndSpy = this.spy(jQuery.sap.measure, "end")
+			oEndSpy = this.spy(Measurement, "end")
 				.withArgs("sap.ui.base.ExpressionParser#parse");
 
 		ExpressionParser.parse(function () { assert.ok(false, "unexpected call"); }, "{='foo'}", 2);
@@ -740,12 +753,9 @@ sap.ui.require([
 				message: sMessage,
 				at: iAt,
 				text: sInput
-			},
-			oTokenizer = jQuery.sap._createJSTokenizer();
+			};
 
-		this.mock(jQuery.sap).expects("_createJSTokenizer").withExactArgs()
-			.returns(oTokenizer);
-		this.mock(oTokenizer).expects("white").withExactArgs()
+		this.mock(JSTokenizer.prototype).expects("white").withExactArgs()
 			.throws(oError);
 
 		this.checkError(assert, sInput, sMessage, iAt);
@@ -754,12 +764,9 @@ sap.ui.require([
 	//*********************************************************************************************
 	QUnit.test("JSTokenizer throws Error", function (assert) {
 		var sExpression = "{= 'foo' }",
-			oError = new Error("Must not set index 0 before previous index 1"),
-			oTokenizer = jQuery.sap._createJSTokenizer();
+			oError = new Error("Must not set index 0 before previous index 1");
 
-		this.mock(jQuery.sap).expects("_createJSTokenizer").withExactArgs()
-			.returns(oTokenizer);
-		this.mock(oTokenizer).expects("setIndex")
+		this.mock(JSTokenizer.prototype).expects("setIndex")
 			.throws(oError);
 
 		assert.throws(function () {

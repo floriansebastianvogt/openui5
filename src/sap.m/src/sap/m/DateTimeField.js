@@ -4,23 +4,26 @@
 
 // Provides control sap.m.DateTimeField.
 sap.ui.define([
-	'jquery.sap.global',
 	'sap/ui/model/type/Date',
 	'sap/ui/model/odata/type/ODataType',
 	'./InputBase',
 	'sap/ui/core/LocaleData',
 	'sap/ui/core/library',
 	'sap/ui/core/format/DateFormat',
-	'./DateTimeFieldRenderer'
+	'./DateTimeFieldRenderer',
+	"sap/base/util/deepEqual",
+	"sap/base/Log",
+	"sap/ui/dom/jquery/cursorPos" // jQuery Plugin "cursorPos"
 ], function(
-	jQuery,
 	SimpleDateType,
 	ODataType,
 	InputBase,
 	LocaleData,
 	coreLibrary,
 	DateFormat,
-	DateTimeFieldRenderer
+	DateTimeFieldRenderer,
+	deepEqual,
+	Log
 ) {
 	"use strict";
 
@@ -116,7 +119,7 @@ sap.ui.define([
 			oDate = this._parseValue(sValue);
 			if (!oDate || oDate.getTime() < this._oMinDate.getTime() || oDate.getTime() > this._oMaxDate.getTime()) {
 				this._bValid = false;
-				jQuery.sap.log.warning("Value can not be converted to a valid date", this);
+				Log.warning("Value can not be converted to a valid date", this);
 			}
 		}
 
@@ -147,7 +150,7 @@ sap.ui.define([
 			throw new Error("Date must be a JavaScript date object; " + this);
 		}
 
-		if (jQuery.sap.equal(this.getDateValue(), oDate)) {
+		if (deepEqual(this.getDateValue(), oDate)) {
 			return this;
 		}
 

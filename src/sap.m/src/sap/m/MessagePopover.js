@@ -4,7 +4,6 @@
 
 // Provides control sap.m.MessagePopover.
 sap.ui.define([
-	"jquery.sap.global",
 	"./ResponsivePopover",
 	"./Button",
 	"./Toolbar",
@@ -15,10 +14,10 @@ sap.ui.define([
 	"./Popover",
 	"./MessageView",
 	"sap/ui/Device",
-	"./MessagePopoverRenderer"
+	"./MessagePopoverRenderer",
+	"sap/base/Log"
 ],
 function(
-	jQuery,
 	ResponsivePopover,
 	Button,
 	Toolbar,
@@ -29,7 +28,8 @@ function(
 	Popover,
 	MessageView,
 	Device,
-	MessagePopoverRenderer
+	MessagePopoverRenderer,
+	Log
 	) {
 		"use strict";
 
@@ -254,7 +254,7 @@ function(
 							},
 							error: function() {
 								var sError = "A request has failed for long text data. URL: " + sLongTextUrl;
-								jQuery.sap.log.error(sError);
+								Log.error(sError);
 								config.promise.reject(sError);
 							}
 						});
@@ -656,31 +656,6 @@ function(
 				// if current page is the list page - set initial focus to the list.
 				// otherwise use default functionality built-in the popover
 				this._oPopover.setInitialFocus(this._oMessageView._oLists[this._sCurrentList || 'all']);
-			}
-		};
-
-		/**
-		 * Handles navigate event of the NavContainer
-		 *
-		 * @private
-		 */
-		MessagePopover.prototype._afterNavigate = function () {
-			// Just wait for the next tick to apply the focus
-			jQuery.sap.delayedCall(0, this, "_restoreFocus");
-		};
-
-		/**
-		 * Restores the focus after navigation
-		 *
-		 * @private
-		 */
-		MessagePopover.prototype._restoreFocus = function () {
-			if (this._oMessageView._isListPage()) {
-				var oRestoreFocus = this._oRestoreFocus && this._oRestoreFocus.control(0);
-
-				oRestoreFocus && oRestoreFocus.focus();
-			} else {
-				this._oMessageView._oBackButton.focus();
 			}
 		};
 

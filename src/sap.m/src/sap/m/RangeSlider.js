@@ -1,25 +1,22 @@
-
 /*!
  * ${copyright}
  */
 sap.ui.define([
-    "jquery.sap.global",
-    "sap/ui/core/InvisibleText",
-    "sap/base/Log",
-    "./Slider",
-    "./SliderTooltip",
-    "./SliderUtilities",
-    "./RangeSliderRenderer"
+	"sap/ui/core/InvisibleText",
+	"sap/base/Log",
+	"./Slider",
+	"./SliderTooltip",
+	"./SliderUtilities",
+	"./RangeSliderRenderer"
 ],
     function(
-    jQuery,
-    InvisibleText,
-    log,
-    Slider,
-    SliderTooltip,
-    SliderUtilities,
-    RangeSliderRenderer
-    ) {
+		InvisibleText,
+		log,
+		Slider,
+		SliderTooltip,
+		SliderUtilities,
+		RangeSliderRenderer
+	) {
         "use strict";
 
         /**
@@ -306,7 +303,7 @@ sap.ui.define([
                 oFormInput = this.getDomRef("input");
 
             if (!!this.getName()) {
-                oFormInput.setAttribute(oHandle.getAttribute("data-range-val"), aRange[iIndex]);
+                oFormInput.setAttribute(oHandle.getAttribute("data-range-val"), this.toFixed(aRange[iIndex], this._iDecimalPrecision));
                 oFormInput.setAttribute("value", this.getValue());
             }
 
@@ -326,8 +323,8 @@ sap.ui.define([
 
             // ARIA updates. Delay the update to prevent multiple updates- for example holding the arrow key.
             // We need only the latest state
-            jQuery.sap.clearDelayedCall(this._ariaUpdateDelay[iIndex]);
-            this._ariaUpdateDelay[iIndex] = jQuery.sap.delayedCall(100, this, "_updateHandleAria", [oHandle, sValue]);
+            clearTimeout(this._ariaUpdateDelay[iIndex]);
+            this._ariaUpdateDelay[iIndex] = setTimeout(this["_updateHandleAria"].bind(this, oHandle, sValue), 100);
         };
 
         RangeSlider.prototype._updateHandleAria = function (oHandle, sValue) {
@@ -335,6 +332,9 @@ sap.ui.define([
                 oProgressHandle = this.getDomRef("progress"),
                 fNormalizedValue = this.toFixed(sValue, this._iDecimalPrecision),
                 sScaleLabel = this._formatValueByCustomElement(fNormalizedValue);
+
+            aRange[0] = this.toFixed(aRange[0], this._iDecimalPrecision);
+            aRange[1] = this.toFixed(aRange[1], this._iDecimalPrecision);
 
             this._updateHandlesAriaLabels();
 
@@ -635,8 +635,9 @@ sap.ui.define([
         RangeSlider.prototype.ontouchstart = function (oEvent) {
             var oTouch = oEvent.targetTouches[0],
                 CSS_CLASS = this.getRenderer().CSS_CLASS,
-                sEventNamespace = "." + CSS_CLASS,
-                fValue, aHandles, aRange, iHandleIndex, fHandlesDistance, oFocusItem;
+                sEventNamespace = "." + CSS_CLASS, fMinValue, fMaxValue,
+                fValue, aHandles, aRange, iHandleIndex, fHandlesDistance, oFocusItem,
+                fTotalNumberOfValues, fPercentOfHandle, fHandleValue, fHandleHalfWidth;
 
             if (!this.getEnabled()) {
                 return;
@@ -667,8 +668,24 @@ sap.ui.define([
                 return Math.abs(fAccumulation - oHandle.offsetLeft);
             }, 0);
 
+            fMinValue = Math.min.apply(Math, aRange);
+            fMaxValue = Math.max.apply(Math, aRange);
+
+            // half width of a handle (both are equal)
+            fHandleHalfWidth = this.$("handle1").outerWidth() / 2;
+            // total number of possible values
+            fTotalNumberOfValues = Math.abs(this.getMin()) + Math.abs(this.getMax());
+            // percents that half a handle takes from the width of the scale
+            fPercentOfHandle = ((fHandleHalfWidth * 100) / this.$("inner").outerWidth());
+            // number of values that takes half a handle
+            fHandleValue = (fPercentOfHandle / 100) * fTotalNumberOfValues;
+
             // if the click is outside the range or distance between handles is below the threshold - update the closest slider handle
-            if (fValue < Math.min.apply(Math, aRange) || fValue > Math.max.apply(Math, aRange) || fHandlesDistance <= SliderUtilities.CONSTANTS.RANGE_MOVEMENT_THRESHOLD) {
+            if (fValue < fMinValue ||
+                fValue < fMinValue + fHandleValue ||
+                fValue > fMaxValue ||
+                fValue > (fMaxValue - fHandleValue) ||
+                fHandlesDistance <= SliderUtilities.CONSTANTS.RANGE_MOVEMENT_THRESHOLD) {
                 aHandles = [this.getClosestHandleDomRef(oTouch)];
                 this._updateHandle(aHandles[0], fValue);
                 // _updateHandle would update the range and the check for change event fire would fail in _ontouchend
@@ -692,7 +709,7 @@ sap.ui.define([
             });
 
             oFocusItem = aHandles.length === 1 ? aHandles[0] : this.getDomRef("progress");
-            jQuery.sap.delayedCall(0, oFocusItem, "focus");
+            setTimeout(oFocusItem["focus"].bind(oFocusItem), 0);
         };
 
         /**
